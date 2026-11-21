@@ -88,6 +88,19 @@ export const issueService = {
     return res.data;
   },
 
+  uploadVoice: async (fileOrBlob: Blob | File) => {
+    const formData = new FormData();
+    formData.append('file', fileOrBlob, 'voice_recording.webm');
+    const res = await api.post<{ voice_audio_url: string; filename: string; size_bytes: number }>(
+      '/issues/upload-voice',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+    return res.data;
+  },
+
   checkDuplicates: async (data: {
     latitude: number;
     longitude: number;

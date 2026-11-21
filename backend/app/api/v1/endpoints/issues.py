@@ -112,6 +112,25 @@ def parse_nlp_text(
     return nlp_result
 
 
+@router.post('/upload-voice')
+def upload_voice_audio(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Stores citizen recorded voice audio note (WebM/WAV/MP3) in NagarSetu repository."""
+    os.makedirs(settings.VOICE_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename or '')[1].lower() or '.webm'
+    unique_name = f"voice_{uuid.uuid4().hex[:12]}{ext}"
+    saved_path = os.path.join(settings.VOICE_DIR, unique_name)
+    with open(saved_path, 'wb') as f:
+        f.write(file.file.read())
+    return {
+        "voice_audio_url": f"/uploads/voice/{unique_name}",
+        "filename": unique_name,
+        "size_bytes": os.path.getsize(saved_path)
+    }
+
+
 # -------------------------------------------------------------------
 # 3. INTELLIGENT DUPLICATE CHECK ENDPOINT
 # -------------------------------------------------------------------

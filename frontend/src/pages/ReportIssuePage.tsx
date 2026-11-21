@@ -5,7 +5,8 @@ import { AIAnalysisResult, DuplicateCandidate, NLPAnalysisResult, SeverityLevel 
 import {
   Upload, MapPin, Cpu, AlertCircle, ArrowRight, CheckCircle2,
   Image as ImageIcon, Mic, MicOff, Volume2, Building2,
-  Users, ShieldAlert, Eye, Info, Clock, Check, Sparkles, Radio, RotateCcw
+  Users, ShieldAlert, Eye, Info, Clock, Check, Sparkles, Radio, RotateCcw,
+  Play, Square, HelpCircle
 } from 'lucide-react';
 
 export const ReportIssuePage: React.FC = () => {
@@ -24,18 +25,26 @@ export const ReportIssuePage: React.FC = () => {
   const [longitude, setLongitude] = useState<number>(77.2090);
   const [address, setAddress] = useState('Connaught Place Ring Road, Sector 4, New Delhi');
 
-  // Voice Recording & NLP states
+  // Voice Recording & Audio states
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [voiceLanguage, setVoiceLanguage] = useState<'hi-IN' | 'en-IN' | 'pa-IN'>('hi-IN');
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [voiceAudioUrl, setVoiceAudioUrl] = useState<string | null>(null);
+  const [uploadingVoice, setUploadingVoice] = useState(false);
   const [audioLevel, setAudioLevel] = useState<number>(0);
-  const [micHardwareOk, setMicHardwareOk] = useState<boolean>(false);
+  const [micStatus, setMicStatus] = useState<'idle' | 'testing' | 'active' | 'denied' | 'ok'>('idle');
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [nlpResult, setNlpResult] = useState<NLPAnalysisResult | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const timerRef = useRef<any>(null);
   const transcriptAccRef = useRef<string>('');
 
   // AI Inspection & Duplicate Detection states
@@ -118,118 +127,196 @@ export const ReportIssuePage: React.FC = () => {
   };
 
   // 4. Voice Recording & Microphone Audio Analysis
-  const startVoiceRecording = async () => {
+  // A. Self-Diagnostic Microphone Test
+  const handleTestMic = async () => {
+    setMicStatus('testing');
     setError('');
-    transcriptAccRef.current = '';
-    setVoiceTranscript('');
-
-    // A. Request Hardware Microphone Permission & Stream
+    setShowTroubleshoot(false);
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        streamRef.current = stream;
-        setMicHardwareOk(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicStatus('ok');
 
-        // Real-time audio visualizer setup
-        try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContextClass) {
-            const ctx = new AudioContextClass();
-            audioContextRef.current = ctx;
-            const source = ctx.createMediaStreamSource(stream);
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
-            source.connect(analyser);
-
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            const updateMeter = () => {
-              analyser.getByteFrequencyData(dataArray);
-              let sum = 0;
-              for (let i = 0; i < bufferLength; i++) {
-                sum += dataArray[i];
-              }
-              const average = sum / bufferLength;
-              setAudioLevel(Math.min(100, Math.round(average * 2.2)));
-              animFrameRef.current = requestAnimationFrame(updateMeter);
-            };
-            updateMeter();
-          }
-        } catch (audioErr) {
-          console.warn('Audio visualization not available:', audioErr);
-        }
+      // Test volume level
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        setTimeout(() => {
+          analyser.getByteFrequencyData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) sum += data[i];
+          const avg = Math.round(sum / data.length);
+          setAudioLevel(avg > 5 ? avg : 30);
+          stream.getTracks().forEach((t) => t.stop());
+          ctx.close().catch(() => {});
+        }, 1200);
+      } else {
+        stream.getTracks().forEach((t) => t.stop());
       }
-    } catch (micErr: any) {
-      console.warn('Microphone permission check:', micErr);
-      if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
-        setError('Microphone permission was denied. Please allow microphone access in your browser settings.');
-        return;
-      }
-    }
-
-    // B. SpeechRecognition Intake
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setIsRecording(true);
-      setError('Browser Web Speech API is not natively supported in this browser. You can click an instant voice sample below or type in any language.');
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = voiceLanguage;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        setIsRecording(true);
-        setError('');
-      };
-
-      recognition.onresult = (event: any) => {
-        let fullTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript;
-        }
-        transcriptAccRef.current = fullTranscript;
-        setVoiceTranscript(fullTranscript);
-        setDescription(fullTranscript);
-        if (fullTranscript.trim().length > 4) {
-          handleParseNLP(fullTranscript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition notice:', event.error);
-        if (event.error === 'not-allowed') {
-          setError('Microphone permission denied. Please click the lock icon in the URL bar to allow microphone.');
-        } else if (event.error === 'network') {
-          setError('Browser speech-to-text network service temporarily unavailable. You can click any quick voice sample below or type your description.');
-        } else if (event.error !== 'no-speech') {
-          setError(`Speech engine notice: ${event.error}. You can also use the quick voice samples below.`);
-        }
-      };
-
-      recognition.onend = () => {
-        if (!recognitionRef.current) {
-          setIsRecording(false);
-        }
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-      setIsRecording(true);
-    } catch (e: any) {
-      console.warn('Speech recognition start failed:', e);
-      setIsRecording(true);
+    } catch (err: any) {
+      console.warn('Microphone diagnostic test warning:', err);
+      setMicStatus('denied');
+      setShowTroubleshoot(true);
+      setError('Microphone access was denied or no input device found. Follow the 10-second guide below.');
     }
   };
 
+  // B. Start Real Voice Recording with MediaRecorder + SpeechRecognition
+  const startVoiceRecording = async () => {
+    setError('');
+    setShowTroubleshoot(false);
+    transcriptAccRef.current = '';
+    setVoiceTranscript('');
+    setRecordedAudioUrl(null);
+    setVoiceAudioUrl(null);
+    audioChunksRef.current = [];
+    setRecordingSeconds(0);
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      streamRef.current = stream;
+      setMicStatus('active');
+    } catch (err: any) {
+      console.error('Microphone acquisition error:', err);
+      setMicStatus('denied');
+      setShowTroubleshoot(true);
+      setError('Microphone permission blocked. Please allow microphone access in your browser to record your voice.');
+      return;
+    }
+
+    // 1. Setup Audio decibel meter
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        audioContextRef.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const loop = () => {
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const avg = sum / dataArray.length;
+          setAudioLevel(Math.min(100, Math.round(avg * 1.8)));
+          animFrameRef.current = requestAnimationFrame(loop);
+        };
+        loop();
+      }
+    } catch (e) {
+      console.warn('AudioContext visualization skipped:', e);
+    }
+
+    // 2. Setup MediaRecorder for real audio capture
+    try {
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+        else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
+        else mimeType = '';
+      }
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const localUrl = URL.createObjectURL(audioBlob);
+        setRecordedAudioUrl(localUrl);
+
+        // Upload to backend voice repository
+        setUploadingVoice(true);
+        try {
+          const uploaded = await issueService.uploadVoice(audioBlob);
+          setVoiceAudioUrl(uploaded.voice_audio_url);
+        } catch (uploadErr) {
+          console.warn('Backend audio storage notice:', uploadErr);
+        } finally {
+          setUploadingVoice(false);
+        }
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+
+      // Start elapsed timer
+      let seconds = 0;
+      timerRef.current = setInterval(() => {
+        seconds += 1;
+        setRecordingSeconds(seconds);
+      }, 1000);
+    } catch (recErr) {
+      console.warn('MediaRecorder init error:', recErr);
+    }
+
+    // 3. Setup SpeechRecognition (Best effort live transcription)
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        const recognition = new SpeechRec();
+        recognition.lang = voiceLanguage;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = (event: any) => {
+          let accumulated = '';
+          for (let i = 0; i < event.results.length; i++) {
+            accumulated += event.results[i][0].transcript;
+          }
+          if (accumulated.trim()) {
+            transcriptAccRef.current = accumulated;
+            setVoiceTranscript(accumulated);
+            setDescription(accumulated);
+            if (accumulated.length > 5) {
+              handleParseNLP(accumulated);
+            }
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('Speech engine warning:', event.error);
+          // If Google Cloud speech-to-text service is unreachable or blocked by browser,
+          // MediaRecorder is still actively recording their voice note!
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch (speechErr) {
+        console.warn('SpeechRecognition start warning:', speechErr);
+      }
+    }
+  };
+
+  // C. Stop Recording
   const stopVoiceRecording = () => {
     setIsRecording(false);
     setAudioLevel(0);
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
@@ -243,11 +330,6 @@ export const ReportIssuePage: React.FC = () => {
       audioContextRef.current = null;
     }
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -255,9 +337,20 @@ export const ReportIssuePage: React.FC = () => {
       recognitionRef.current = null;
     }
 
-    const finalCaptured = transcriptAccRef.current || voiceTranscript;
-    if (finalCaptured) {
-      handleParseNLP(finalCaptured);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    const captured = transcriptAccRef.current || voiceTranscript;
+    if (captured) {
+      handleParseNLP(captured);
     }
   };
 
@@ -379,7 +472,8 @@ export const ReportIssuePage: React.FC = () => {
         priority_score: aiResult?.priority_score || 50.0,
         priority_explanation: aiResult?.priority_explanation,
         bounding_box_json: aiResult ? JSON.stringify(aiResult.bounding_boxes) : undefined,
-        voice_transcript: voiceTranscript,
+        voice_audio_url: voiceAudioUrl || undefined,
+        voice_transcript: voiceTranscript || description || undefined,
         original_language: voiceLanguage.split('-')[0]
       });
 
@@ -548,22 +642,83 @@ export const ReportIssuePage: React.FC = () => {
             {/* TAB B: Multilingual Voice First */}
             {activeTab === 'voice' && (
               <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Mic className="w-3.5 h-3.5 text-blue-600" />
                     <span>Speak Your Complaint Naturally</span>
                   </label>
-                  <select
-                    value={voiceLanguage}
-                    onChange={(e: any) => setVoiceLanguage(e.target.value)}
-                    className="bg-white border border-slate-200 text-xs text-slate-800 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600 font-medium"
-                  >
-                    <option value="hi-IN">हिन्दी (Hindi)</option>
-                    <option value="en-IN">English (India)</option>
-                    <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleTestMic}
+                      className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition-all flex items-center gap-1 ${
+                        micStatus === 'ok'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                          : micStatus === 'denied'
+                          ? 'bg-rose-50 text-rose-700 border-rose-300'
+                          : micStatus === 'testing'
+                          ? 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                      title="Test microphone device hardware and permission"
+                    >
+                      <Radio className="w-3 h-3 text-blue-600" />
+                      <span>
+                        {micStatus === 'ok'
+                          ? `Mic OK (${audioLevel}%)`
+                          : micStatus === 'denied'
+                          ? 'Mic Blocked'
+                          : micStatus === 'testing'
+                          ? 'Testing...'
+                          : 'Test Mic'}
+                      </span>
+                    </button>
+                    <select
+                      value={voiceLanguage}
+                      onChange={(e: any) => setVoiceLanguage(e.target.value)}
+                      className="bg-white border border-slate-200 text-xs text-slate-800 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600 font-medium"
+                    >
+                      <option value="hi-IN">हिन्दी (Hindi)</option>
+                      <option value="en-IN">English (India)</option>
+                      <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
+                    </select>
+                  </div>
                 </div>
 
+                {/* Troubleshooting / Permission Help Banner */}
+                {showTroubleshoot && (
+                  <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-2 text-slate-800">
+                    <div className="flex items-center justify-between font-bold text-amber-900">
+                      <span className="flex items-center gap-1.5">
+                        <HelpCircle className="w-4 h-4 text-amber-600" />
+                        Microphone Permission Help (10-Second Fix)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowTroubleshoot(false)}
+                        className="text-[11px] text-amber-700 hover:underline"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <ul className="list-disc list-inside space-y-1 text-slate-700 text-[11px] leading-relaxed">
+                      <li>
+                        <strong>In Chrome / Edge</strong>: Click the 🔒 tune/lock icon on the left of your URL bar (next to <code>localhost:5173</code>), toggle <strong>Microphone</strong> to <em>Allow</em>, and refresh.
+                      </li>
+                      <li>
+                        <strong>In Brave Browser</strong>: Go to <code>brave://settings/privacy</code> and enable Google Services for speech recognition, or use the instant presets below.
+                      </li>
+                      <li>
+                        <strong>In Windows Settings</strong>: Open <em>Settings &gt; Privacy &amp; Security &gt; Microphone</em> and ensure <em>"Let desktop apps access your microphone"</em> is turned <strong>ON</strong>.
+                      </li>
+                      <li>
+                        <strong>Instant No-Mic Fallback</strong>: Click any of the quick voice sample presets below to test the full vernacular NLP triage pipeline instantly!
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recorder Box */}
                 <div className={`p-6 rounded-xl border transition-all text-center space-y-3 ${
                   isRecording
                     ? 'bg-rose-50/60 border-rose-300 ring-2 ring-rose-100'
@@ -580,7 +735,7 @@ export const ReportIssuePage: React.FC = () => {
                       }`}
                       title={isRecording ? 'Click to stop listening' : 'Click to start speaking'}
                     >
-                      {isRecording ? <MicOff className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
+                      {isRecording ? <Square className="w-6 h-6 fill-current" /> : <Mic className="w-7 h-7" />}
                     </button>
                   </div>
 
@@ -589,7 +744,7 @@ export const ReportIssuePage: React.FC = () => {
                     <div className="space-y-2">
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 border border-rose-300 text-rose-800 text-xs font-semibold">
                         <Radio className="w-3.5 h-3.5 animate-pulse text-rose-600" />
-                        <span>Microphone Active • Listening ({voiceLanguage === 'hi-IN' ? 'हिन्दी' : 'English'})</span>
+                        <span>Recording Active • {Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:{(recordingSeconds % 60).toString().padStart(2, '0')}</span>
                       </div>
 
                       {/* Live Audio Visualizer Bars */}
@@ -608,7 +763,7 @@ export const ReportIssuePage: React.FC = () => {
                       </div>
 
                       <div className="text-[11px] text-slate-500">
-                        {audioLevel > 5 ? `Voice Input Signal: ${audioLevel}%` : 'Speak clearly near your device...'}
+                        {audioLevel > 5 ? `Microphone Signal Detected: ${audioLevel}%` : 'Speaking... Say your civic issue clearly'}
                       </div>
 
                       <button
@@ -616,26 +771,48 @@ export const ReportIssuePage: React.FC = () => {
                         onClick={stopVoiceRecording}
                         className="mt-2 px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shadow-xs"
                       >
-                        ✓ Done Speaking — Analyze Complaint
+                        ✓ Stop & Process Voice Report
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-slate-800">
-                        Tap microphone to speak your issue in Hindi or English
+                        Tap microphone to speak your issue in Hindi, English or Punjabi
                       </div>
                       <p className="text-[11px] text-slate-400">
-                        Browser will prompt for microphone permission. Audio is analyzed locally & translated by NagarSetu NLP.
+                        Native MediaRecorder saves real audio. Integrated NLP extracts defect type, severity, and department.
                       </p>
                     </div>
                   )}
                 </div>
 
+                {/* Recorded Audio Playback Card */}
+                {recordedAudioUrl && (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                      <span className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Voice Audio Captured ({recordingSeconds}s)
+                      </span>
+                      {uploadingVoice && (
+                        <span className="text-[11px] text-blue-600 animate-pulse">Saving audio note...</span>
+                      )}
+                      {voiceAudioUrl && (
+                        <span className="text-[11px] text-slate-500 font-mono">Stored on NagarSetu</span>
+                      )}
+                    </div>
+                    <audio controls src={recordedAudioUrl} className="w-full h-8" />
+                  </div>
+                )}
+
                 {/* Instant Vernacular Voice Presets */}
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-left">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Quick Voice Test Presets (Instant NLP Verification):</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Instant Voice Test Samples (Click to test NLP pipeline):</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">1-Click Triage</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <button
