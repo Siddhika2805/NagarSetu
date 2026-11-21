@@ -31,10 +31,15 @@ export const IssueTrackingPage: React.FC = () => {
   const loadTracking = () => {
     if (!id) return;
     setLoading(true);
-    Promise.all([citizenService.details(+id), citizenService.timeline(+id)])
-      .then(([i, t]) => {
+    citizenService.details(+id)
+      .then(async (i) => {
         setIssue(i);
-        setTimeline(t || []);
+        try {
+          const t = await citizenService.timeline(+id);
+          setTimeline(t && t.length > 0 ? t : (i.status_history || []));
+        } catch {
+          setTimeline(i.status_history || []);
+        }
       })
       .catch(() => setError('Unable to load this complaint tracking timeline.'))
       .finally(() => setLoading(false));

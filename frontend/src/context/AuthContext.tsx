@@ -17,7 +17,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('civic_token'));
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem('nagarsetu_token') || localStorage.getItem('civic_token')
+  );
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {

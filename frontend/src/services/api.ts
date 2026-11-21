@@ -287,8 +287,20 @@ export const officerService = {
   progress: async (id: number, progress_percentage: number, note?: string) => (await api.patch<Issue>(`/issues/${id}/progress`, { progress_percentage, note })).data,
   note: async (id: number, progress_percentage: number, note: string) => (await api.post<Issue>(`/issues/${id}/notes`, { progress_percentage, note })).data,
   estimate: async (id: number, estimated_completion_date: string) => (await api.patch<Issue>(`/issues/${id}/estimate`, { estimated_completion_date })).data,
-  submitResolution: async (id: number, resolution_image_url: string, notes: string) =>
-    (await api.post<Issue>(`/issues/${id}/submit-resolution`, { resolution_image_url, notes })).data,
+  submitResolution: async (id: number, fileOrUrl: File | string, notes: string) => {
+    let imageUrl: string;
+    if (typeof fileOrUrl !== 'string') {
+      const uploadRes = await issueService.analyzeImage(fileOrUrl);
+      imageUrl = uploadRes.original_image_url;
+    } else {
+      imageUrl = fileOrUrl;
+    }
+    const res = await api.post<Issue>(`/issues/${id}/submit-resolution`, {
+      resolution_image_url: imageUrl,
+      notes,
+    });
+    return res.data;
+  },
   resolve: async (id: number) => (await api.post<Issue>(`/issues/${id}/resolve`)).data,
   close: async (id: number) => (await api.post<Issue>(`/issues/${id}/close`)).data,
 };
