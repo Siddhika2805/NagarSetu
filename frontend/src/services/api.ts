@@ -80,6 +80,14 @@ export const issueService = {
     return res.data;
   },
 
+  parseNLP: async (transcript: string, language?: string) => {
+    const res = await api.post<NLPAnalysisResult>('/issues/parse-nlp', {
+      transcript,
+      language: language || 'en',
+    });
+    return res.data;
+  },
+
   checkDuplicates: async (data: {
     latitude: number;
     longitude: number;

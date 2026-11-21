@@ -8,7 +8,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import {
   Building2, CheckCircle2, Clock, AlertTriangle, Upload, Eye,
   RefreshCw, ShieldAlert, FileText, ArrowRight, XCircle, CheckSquare,
-  Sparkles, Camera
+  Camera, Check
 } from 'lucide-react';
 
 const formatDateTime = (d?: string | null) =>
@@ -34,7 +34,6 @@ export const OfficerDashboardPage: React.FC = () => {
       const data = await officerService.assigned();
       setIssues(data);
     } catch {
-      // Fallback to listIssues
       try {
         const fallback = await issueService.listIssues({ dept_id: user?.department_id || undefined });
         setIssues(fallback);
@@ -75,14 +74,13 @@ export const OfficerDashboardPage: React.FC = () => {
     setModalError('');
 
     try {
-      // If photo was selected, upload it via analyzeImage or use synthetic path
       let resolutionUrl = '/uploads/original/sample_infra.jpg';
       if (repairPhotoFile) {
         try {
           const uploaded = await issueService.analyzeImage(repairPhotoFile);
           resolutionUrl = uploaded.original_image_url;
         } catch {
-          // Keep fallback URL
+          // Fallback path
         }
       }
 
@@ -92,342 +90,331 @@ export const OfficerDashboardPage: React.FC = () => {
       setRepairPhotoPreview(null);
       setRepairNotes('');
       fetchDepartmentQueue();
-    } catch (err: any) {
-      setModalError(err.response?.data?.detail || 'Failed to submit repair evidence.');
+    } catch {
+      setModalError('Unable to submit resolution evidence. Please try again.');
     } finally {
       setSubmittingRepair(false);
     }
   };
 
-  // Metrics Calculations
-  const now = new Date().getTime();
-  const criticalCount = issues.filter((i) => String(i.severity).toUpperCase() === 'CRITICAL').length;
+  const now = new Date();
   const overdueCount = issues.filter(
-    (i) => i.sla_deadline && new Date(i.sla_deadline).getTime() < now && i.status !== IssueStatus.RESOLVED && i.status !== IssueStatus.CLOSED
+    (i) => i.sla_deadline && new Date(i.sla_deadline) < now && i.status !== IssueStatus.RESOLVED && i.status !== IssueStatus.CLOSED
   ).length;
-  const activeCount = issues.filter((i) => i.status !== IssueStatus.RESOLVED && i.status !== IssueStatus.CLOSED).length;
-  const awaitingVerifyCount = issues.filter((i) => i.status === IssueStatus.RESOLUTION_SUBMITTED).length;
+
+  const criticalCount = issues.filter(
+    (i) => String(i.severity).toUpperCase() === 'CRITICAL' || String(i.severity).toUpperCase() === 'HIGH'
+  ).length;
+
+  const inProgressCount = issues.filter(
+    (i) => i.status === IssueStatus.IN_PROGRESS || i.status === IssueStatus.ACCEPTED
+  ).length;
 
   const filteredIssues = issues.filter((i) => {
-    if (filter === 'CRITICAL') return String(i.severity).toUpperCase() === 'CRITICAL';
-    if (filter === 'OVERDUE')
-      return (
-        i.sla_deadline &&
-        new Date(i.sla_deadline).getTime() < now &&
-        i.status !== IssueStatus.RESOLVED &&
-        i.status !== IssueStatus.CLOSED
-      );
-    if (filter === 'IN_PROGRESS') return i.status === IssueStatus.IN_PROGRESS;
+    if (filter === 'CRITICAL') return String(i.severity).toUpperCase() === 'CRITICAL' || String(i.severity).toUpperCase() === 'HIGH';
+    if (filter === 'OVERDUE') return i.sla_deadline && new Date(i.sla_deadline) < now && i.status !== IssueStatus.RESOLVED;
+    if (filter === 'IN_PROGRESS') return i.status === IssueStatus.IN_PROGRESS || i.status === IssueStatus.ACCEPTED;
     return true;
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/70 border border-indigo-800 text-indigo-300 text-xs font-semibold mb-2">
-              <Building2 className="w-3.5 h-3.5 text-indigo-400" /> NAGARSETU DEPARTMENT OFFICER PORTAL
+    <div className="bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Bar */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+              <Building2 className="w-3.5 h-3.5 text-blue-700" />
+              <span>OFFICIAL DEPARTMENT OPERATIONAL QUEUE</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              Department Operations & Work Orders
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {user?.department?.name || 'Department Infrastructure Queue'}
             </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Welcome back, <strong className="text-slate-200">{user?.full_name}</strong>. Enforce departmental SLAs and upload verifiable repair proof.
+            <p className="text-xs text-slate-500">
+              Responsible Officer: <strong className="text-slate-800 font-medium">{user?.full_name}</strong> • Strict SLA Adherence Mandate
             </p>
           </div>
-          <button
-            onClick={fetchDepartmentQueue}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" /> Refresh Roster
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchDepartmentQueue}
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-xs"
+              title="Refresh Queue"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <Link
+              to="/map"
+              className="px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+            >
+              <span>View On Smart Map</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
-        {/* 1. METRICS STRIP */}
+        {/* 4 Performance Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Active Department Queue</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono mt-1">{activeCount}</div>
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Queue Total</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{issues.length}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Assigned to department</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Critical Priority (24h SLA)</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-mono mt-1">{criticalCount}</div>
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Critical / High</div>
+            <div className="text-2xl font-bold text-rose-700 mt-1 font-mono">{criticalCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">24h / 48h priority target</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Overdue / SLA Escalated</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono mt-1">{overdueCount}</div>
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Active In Progress</div>
+            <div className="text-2xl font-bold text-amber-700 mt-1 font-mono">{inProgressCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Field teams dispatched</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Awaiting Citizen Verification</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-teal-400 font-mono mt-1">{awaitingVerifyCount}</div>
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">SLA Overdue</div>
+            <div className="text-2xl font-bold text-rose-800 mt-1 font-mono">{overdueCount}</div>
+            <div className="text-[11px] text-slate-400 mt-1">Breached deadline</div>
           </div>
         </div>
 
-        {/* 2. FILTER BUTTONS */}
+        {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setFilter('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              filter === 'ALL'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-950'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            All Assigned ({issues.length})
-          </button>
-          <button
-            onClick={() => setFilter('CRITICAL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              filter === 'CRITICAL'
-                ? 'bg-rose-500 text-white shadow-md shadow-rose-950'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Critical Priority ({criticalCount})
-          </button>
-          <button
-            onClick={() => setFilter('OVERDUE')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              filter === 'OVERDUE'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-950'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Overdue SLA ({overdueCount})
-          </button>
-          <button
-            onClick={() => setFilter('IN_PROGRESS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              filter === 'IN_PROGRESS'
-                ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-950'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Work in Progress
-          </button>
+          {(['ALL', 'CRITICAL', 'OVERDUE', 'IN_PROGRESS'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs ${
+                filter === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {tab === 'ALL' && `All Issues (${issues.length})`}
+              {tab === 'CRITICAL' && `Critical & High (${criticalCount})`}
+              {tab === 'OVERDUE' && `SLA Overdue (${overdueCount})`}
+              {tab === 'IN_PROGRESS' && `In Progress (${inProgressCount})`}
+            </button>
+          ))}
         </div>
 
-        {/* 3. WORK ORDER CARDS */}
-        {loading ? (
-          <div className="text-center py-16 text-slate-400">Loading department queue...</div>
-        ) : filteredIssues.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
-            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
-            <h3 className="text-lg font-bold text-white">No Complaints in This Filter</h3>
-            <p className="text-xs text-slate-400">All work orders are currently up to date.</p>
+        {/* Issues Queue Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Department Work Orders ({filteredIssues.length})
+            </h2>
+            <span className="text-xs text-slate-500">Sorted by Priority & Urgency</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredIssues.map((issue) => {
-              const isOverdue =
-                issue.sla_deadline &&
-                new Date(issue.sla_deadline).getTime() < now &&
-                issue.status !== IssueStatus.RESOLVED &&
-                issue.status !== IssueStatus.CLOSED;
 
-              const imgUrl =
-                issue.images && issue.images.length > 0
-                  ? issue.images[0].annotated_image_path || issue.images[0].original_image_path
-                  : undefined;
+          {loading ? (
+            <div className="p-12 text-center text-slate-500">
+              <RefreshCw className="w-5 h-5 text-blue-600 animate-spin mx-auto mb-2" />
+              <div className="text-xs font-medium">Updating work queue...</div>
+            </div>
+          ) : filteredIssues.length === 0 ? (
+            <div className="p-12 text-center text-slate-500 space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto" />
+              <div className="text-sm font-semibold text-slate-700">No Complaints Match Filter</div>
+              <p className="text-xs text-slate-400">All work orders in this category have been addressed.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {filteredIssues.map((issue) => {
+                const isOverdue =
+                  issue.sla_deadline &&
+                  new Date(issue.sla_deadline) < now &&
+                  issue.status !== IssueStatus.RESOLVED &&
+                  issue.status !== IssueStatus.CLOSED;
 
-              return (
-                <div
-                  key={issue.id}
-                  className={`rounded-2xl border bg-slate-900/70 overflow-hidden flex flex-col justify-between transition-all ${
-                    isOverdue ? 'border-rose-600/80 ring-1 ring-rose-500/30' : 'border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div>
-                    {imgUrl && (
-                      <div className="h-44 bg-slate-950 relative">
-                        <img src={imgUrl} alt={issue.title} className="w-full h-full object-cover" />
-                        <div className="absolute top-3 left-3">
-                          <StatusBadge status={issue.status} />
-                        </div>
-                        {isOverdue && (
-                          <div className="absolute top-3 right-3 bg-rose-600 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-full shadow-md animate-pulse">
-                            SLA Breached
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-cyan-400 font-bold uppercase">{issue.issue_type}</span>
+                return (
+                  <div
+                    key={issue.id}
+                    className={`p-4 sm:p-5 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                      isOverdue ? 'border-l-4 border-l-rose-500 bg-rose-50/20' : ''
+                    }`}
+                  >
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-slate-400">#{issue.id}</span>
+                        <StatusBadge status={issue.status} />
                         <PriorityBadge score={issue.priority_score} severity={issue.severity} />
-                      </div>
-
-                      <h3 className="text-base font-bold text-white line-clamp-1">{issue.title}</h3>
-                      <p className="text-xs text-slate-400 line-clamp-2">{issue.address}</p>
-
-                      {/* SLA Commitment */}
-                      <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs space-y-1">
-                        <div className="flex justify-between items-center text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-teal-400" /> SLA Target:
+                        {isOverdue && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                            <Clock className="w-3 h-3" /> SLA BREACHED
                           </span>
-                          <span className="font-mono text-slate-200">{issue.sla_hours || 48} Hours</span>
-                        </div>
-                        {issue.sla_deadline && (
-                          <div className={`text-[11px] font-mono ${isOverdue ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                            {isOverdue ? 'Overdue since: ' : 'Deadline: '} {formatDateTime(issue.sla_deadline)}
-                          </div>
                         )}
                       </div>
 
-                      {/* Progress Bar */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-slate-400">
-                          <span>Ground Progress</span>
-                          <span className="font-mono font-bold text-cyan-300">{issue.progress_percentage || 0}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                          <div
-                            className="h-full bg-cyan-500 rounded-full"
-                            style={{ width: `${issue.progress_percentage || 0}%` }}
-                          />
-                        </div>
+                      <h3 className="text-sm font-semibold text-slate-900 truncate">{issue.title}</h3>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                        <span>Address: {issue.address || 'GPS Coordinates captured'}</span>
+                        <span>SLA Target: {issue.sla_hours}h</span>
+                        {issue.sla_deadline && (
+                          <span>Deadline: {formatDateTime(issue.sla_deadline)}</span>
+                        )}
+                        {issue.support_count > 1 && (
+                          <span className="text-blue-700 font-medium">{issue.support_count} citizens endorsed</span>
+                        )}
                       </div>
+
+                      {issue.priority_explanation && (
+                        <p className="text-[11px] text-slate-500 italic bg-slate-50 p-1.5 rounded border border-slate-100 max-w-xl">
+                          Priority Logic: {issue.priority_explanation}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action Controls */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {issue.status === IssueStatus.AI_ANALYZED || issue.status === IssueStatus.SUBMITTED ? (
+                        <button
+                          onClick={() => handleAccept(issue.id)}
+                          className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Accept Assignment</span>
+                        </button>
+                      ) : null}
+
+                      {issue.status === IssueStatus.ACCEPTED ||
+                      issue.status === IssueStatus.IN_PROGRESS ||
+                      issue.status === IssueStatus.AWAITING_INSPECTION ||
+                      issue.status === IssueStatus.REOPENED ? (
+                        <button
+                          onClick={() => setResolvingIssue(issue)}
+                          className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Submit Resolution Evidence</span>
+                        </button>
+                      ) : null}
+
+                      <Link
+                        to={`/issue/${issue.id}`}
+                        className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Inspect</span>
+                      </Link>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-                  {/* Actions Strip */}
-                  <div className="p-5 pt-0 space-y-2.5">
-                    {issue.status === IssueStatus.ASSIGNED && (
-                      <button
-                        onClick={() => handleAccept(issue.id)}
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
-                      >
-                        Accept Work Order
-                      </button>
-                    )}
-
-                    {(issue.status === IssueStatus.ACCEPTED ||
-                      issue.status === IssueStatus.IN_PROGRESS ||
-                      issue.status === IssueStatus.REOPENED) && (
-                      <button
-                        onClick={() => setResolvingIssue(issue)}
-                        className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-all"
-                      >
-                        <Camera className="w-4 h-4" /> Upload Repair Evidence & Submit
-                      </button>
-                    )}
-
-                    {issue.status === IssueStatus.RESOLUTION_SUBMITTED && (
-                      <div className="p-2.5 rounded-xl bg-teal-950/60 border border-teal-800/80 text-center text-xs text-teal-300 font-semibold">
-                        Awaiting Citizen Ground Verification
-                      </div>
-                    )}
-
-                    <Link
-                      to={`/issue/${issue.id}`}
-                      className="block text-center w-full py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold border border-slate-800 transition-colors"
-                    >
-                      Audit Details & History
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 4. SUBMIT REPAIR EVIDENCE MODAL */}
-        {resolvingIssue && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-teal-500/60 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2 text-teal-400 font-bold text-sm">
-                  <Camera className="w-5 h-5" />
-                  <span>Submit Ground Repair Evidence — #{resolvingIssue.id}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setResolvingIssue(null)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
+      {/* Submit Resolution Photographic Proof Modal */}
+      {resolvingIssue && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Ground Audit Evidence</span>
+                <h3 className="text-base font-bold text-slate-900">Submit Repair Proof for #{resolvingIssue.id}</h3>
               </div>
+              <button
+                onClick={() => setResolvingIssue(null)}
+                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
 
-              {modalError && (
-                <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-xs">
-                  {modalError}
+            {modalError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
+                {modalError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Upload Physical Repair Photograph
+                </label>
+                <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  {repairPhotoPreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={repairPhotoPreview}
+                        alt="Repair preview"
+                        className="h-36 mx-auto object-cover rounded-md border border-slate-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepairPhotoFile(null);
+                          setRepairPhotoPreview(null);
+                        }}
+                        className="text-xs text-rose-600 font-semibold hover:underline"
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer space-y-1 block">
+                      <Camera className="w-7 h-7 text-slate-400 mx-auto" />
+                      <div className="text-xs font-semibold text-blue-600">Click to capture or upload repair photo</div>
+                      <div className="text-[11px] text-slate-400">JPG, PNG up to 10MB</div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleRepairPhotoSelect(e.target.files ? e.target.files[0] : null)}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div>
-                <h4 className="text-sm font-bold text-white">{resolvingIssue.title}</h4>
-                <p className="text-xs text-slate-400">{resolvingIssue.address}</p>
-              </div>
-
-              {/* Photo Upload */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-300">
-                  After-Repair Proof Photograph (Mandatory for Citizen Verification)
-                </label>
-                <div className="border-2 border-dashed border-slate-700 hover:border-teal-500 rounded-xl p-4 text-center cursor-pointer bg-slate-950">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleRepairPhotoSelect(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="repair-file"
-                  />
-                  <label htmlFor="repair-file" className="cursor-pointer space-y-1 block">
-                    <Upload className="w-6 h-6 text-teal-400 mx-auto" />
-                    <div className="text-xs text-slate-300">
-                      {repairPhotoFile ? repairPhotoFile.name : 'Select or capture after-repair photo'}
-                    </div>
-                  </label>
-                </div>
-                {repairPhotoPreview && (
-                  <div className="h-32 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                    <img src={repairPhotoPreview} alt="Repair Preview" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-
-              {/* Repair Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">
-                  Official Completion Notes & Remediation Summary:
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Physical Remediation Notes (Mandatory)
                 </label>
                 <textarea
                   rows={3}
+                  required
                   value={repairNotes}
                   onChange={(e) => setRepairNotes(e.target.value)}
-                  placeholder="e.g. Dispatched 4-man paving crew. Hot-mix asphalt laid and compacted with vibrating roller. Site cleared."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
+                  placeholder="e.g., Pothole excavated, sub-base compacted, hot-mix asphalt laid and roller compacted. Road cleared for traffic."
+                  className="w-full p-2.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setResolvingIssue(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitResolutionEvidence}
-                  disabled={submittingRepair}
-                  className="px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-teal-950"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  {submittingRepair ? 'Submitting to AI Engine...' : 'Submit for Citizen Sign-off'}
-                </button>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1">
+                <div className="font-semibold">Automated AI Evidence Comparison:</div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  Upon submission, NagarSetu AI will compute structural image differencing against the original defect photo and notify the citizen to confirm the fix.
+                </p>
               </div>
             </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setResolvingIssue(null)}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submittingRepair}
+                onClick={handleSubmitResolutionEvidence}
+                className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{submittingRepair ? 'Uploading Evidence...' : 'Submit Resolution Proof'}</span>
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

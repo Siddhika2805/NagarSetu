@@ -6,10 +6,12 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { StatusBadge } from '../components/common/StatusBadge';
 import {
   PlusCircle, CheckCircle2, Clock, AlertTriangle, ArrowRight,
-  ShieldCheck, Eye, RefreshCw, MapPin, Sparkles, XCircle, CheckSquare
+  ShieldCheck, Eye, RefreshCw, MapPin, XCircle, CheckSquare,
+  FileText, MessageSquare
 } from 'lucide-react';
 
-const formatDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const formatDate = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 export const CitizenDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -25,7 +27,7 @@ export const CitizenDashboardPage: React.FC = () => {
 
   const fetchDashboardData = () => {
     setLoading(true);
-    Promise.all([citizenService.stats(), citizenService.reports({ limit: 8 })])
+    Promise.all([citizenService.stats(), citizenService.reports({ limit: 12 })])
       .then(([s, r]) => {
         setStats(s);
         setReports(r);
@@ -56,80 +58,74 @@ export const CitizenDashboardPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-5 h-5 text-cyan-400 animate-spin" />
-          <span>Loading your NagarSetu Citizen Workspace...</span>
+      <div className="min-h-[70vh] flex items-center justify-center text-slate-500">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+          <span className="text-sm font-medium">Loading citizen dashboard...</span>
         </div>
       </div>
     );
   }
 
-  // Find any complaints currently awaiting citizen verification
+  // Pending citizen verifications
   const pendingVerifications = reports.filter(
     (i) => i.status === IssueStatus.RESOLUTION_SUBMITTED || i.status === IssueStatus.CITIZEN_VERIFICATION
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+    <div className="bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/70 border border-cyan-800 text-cyan-300 text-xs font-semibold mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> NAGARSETU CITIZEN PORTAL
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 mb-1.5">
+              <span>NAGARSETU CITIZEN WORKSPACE</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">Citizen Dashboard</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Track your reported infrastructure issues, endorse community reports, and verify official ground repairs.
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Citizen Dashboard</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Monitor your lodged civic reports, track field repair progress, and confirm physical ground resolutions.
             </p>
           </div>
           <Link
             to="/report"
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-cyan-950 transition-all transform hover:-translate-y-0.5"
+            className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-2 shadow-xs transition-colors"
           >
-            <PlusCircle className="w-4 h-4" /> Report New Issue
+            <PlusCircle className="w-4 h-4" />
+            <span>Report New Issue</span>
           </Link>
         </div>
 
-        {error && (
-          <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* 1. CITIZEN-VERIFIED RESOLUTION ACTION BANNER */}
+        {/* Action Center: Pending Verifications Alert */}
         {pendingVerifications.length > 0 && (
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-teal-950/60 via-slate-900 to-cyan-950/60 border border-teal-500/50 shadow-xl space-y-4">
+          <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-teal-300 font-bold text-base">
-                <CheckSquare className="w-5 h-5 text-teal-400" />
-                <span>Action Required: Official Repair Submitted for Ground Verification</span>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <h3 className="text-sm font-bold text-amber-900">
+                  {pendingVerifications.length} Repair(s) Awaiting Your Physical Verification
+                </h3>
               </div>
-              <span className="text-xs bg-teal-900 text-teal-200 px-3 py-1 rounded-full font-mono font-bold">
-                {pendingVerifications.length} Awaiting Your Sign-Off
+              <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                Action Required
               </span>
             </div>
-            <p className="text-sm text-slate-300">
-              Department officers have uploaded after-repair evidence for your complaint. NagarSetu will <strong>not close this ticket</strong> until you confirm the fix on ground.
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Municipal officers have submitted repair photographic evidence for your report(s).
+              As the reporting citizen, your verification is required before tickets can be officially closed.
             </p>
-            <div className="grid sm:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
               {pendingVerifications.map((item) => (
-                <div key={item.id} className="p-4 rounded-xl bg-slate-950/80 border border-teal-800/80 flex items-center justify-between gap-4">
+                <div key={item.id} className="bg-white p-4 rounded-lg border border-amber-200/80 flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-sm font-bold text-white truncate">{item.title}</div>
-                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                      <span>{item.department?.name || 'Department'}</span>
-                      <span>•</span>
-                      <span className="text-teal-300 font-medium">Repair photos uploaded</span>
-                    </div>
+                    <div className="text-xs font-bold text-slate-900 truncate">#{item.id}: {item.title}</div>
+                    <div className="text-[11px] text-slate-500 truncate mt-0.5">{item.address}</div>
                   </div>
                   <button
-                    type="button"
                     onClick={() => setVerifyingIssue(item)}
-                    className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs flex-shrink-0 shadow-md transition-colors"
+                    className="shrink-0 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
                   >
-                    Inspect & Verify
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>Verify Repair</span>
                   </button>
                 </div>
               ))}
@@ -137,236 +133,241 @@ export const CitizenDashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* 2. STATS OVERVIEW CARDS */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Total Reports</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono mt-1">
-              {stats?.total_issues || 0}
+        {/* 4 KPI Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Reports</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">
+              {stats?.total_issues || reports.length || 0}
             </div>
+            <div className="text-[11px] text-slate-400 mt-1">Lodged by your account</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Under Review</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono mt-1">
-              {stats?.under_review || 0}
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">In Progress</div>
+            <div className="text-2xl font-bold text-amber-700 mt-1 font-mono">
+              {stats?.in_progress || 0}
             </div>
+            <div className="text-[11px] text-slate-400 mt-1">Assigned to field teams</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Assigned / In Progress</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-cyan-300 font-mono mt-1">
-              {(stats?.assigned || 0) + (stats?.in_progress || 0)}
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Awaiting Verify</div>
+            <div className="text-2xl font-bold text-blue-700 mt-1 font-mono">
+              {pendingVerifications.length}
             </div>
+            <div className="text-[11px] text-slate-400 mt-1">Pending your sign-off</div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Awaiting Verification</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-teal-400 font-mono mt-1">
-              {stats?.awaiting_verification || pendingVerifications.length}
-            </div>
-          </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Confirmed Resolved</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono mt-1">
+
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resolved</div>
+            <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">
               {stats?.resolved || 0}
             </div>
-          </div>
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
-            <div className="text-xs text-slate-400 font-medium">Critical / High</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-mono mt-1">
-              {stats?.high_priority || 0}
-            </div>
+            <div className="text-[11px] text-slate-400 mt-1">Confirmed closed</div>
           </div>
         </div>
 
-        {/* 3. RECENT COMPLAINTS TABLE & CARDS */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-cyan-400" />
-              <span>Your Reported Complaints</span>
-            </h2>
-            <Link to="/my-reports" className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-              View All Reports ({stats?.total_issues || 0}) <ArrowRight className="w-4 h-4" />
+        {/* Recent Reports List */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Your Lodged Civic Reports</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time tracking of issues submitted from your account</p>
+            </div>
+            <Link
+              to="/my-reports"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <span>View All Reports</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {reports.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
-              <CheckCircle2 className="w-12 h-12 text-slate-600 mx-auto" />
-              <p className="text-base text-slate-300">No civic complaints reported yet.</p>
+            <div className="p-12 text-center text-slate-500 space-y-3">
+              <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto" />
+              <div className="text-sm font-semibold text-slate-700">No Complaints Lodged Yet</div>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Notice a road pothole, garbage pile, or water leakage? Submit a photo or voice report in seconds.
+              </p>
               <Link
                 to="/report"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white font-semibold text-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
               >
-                <PlusCircle className="w-4 h-4" /> Report Your First Defect
+                <PlusCircle className="w-3.5 h-3.5" /> Report Issue
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {reports.map((issue) => (
-                <div
-                  key={issue.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/70 hover:border-slate-700 transition-all p-5 flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-mono text-slate-500">Ticket #{issue.id}</span>
-                        <h3 className="font-bold text-base text-white hover:text-cyan-300 transition-colors">
-                          <Link to={`/issue/${issue.id}`}>{issue.title}</Link>
-                        </h3>
-                      </div>
-                      <StatusBadge status={issue.status} />
+            <div className="divide-y divide-slate-100">
+              {reports.map((item) => (
+                <div key={item.id} className="p-4 sm:p-5 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-slate-400">#{item.id}</span>
+                      <StatusBadge status={item.status} />
+                      <PriorityBadge score={item.priority_score} severity={item.severity} />
+                      {item.department && (
+                        <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          {item.department.name}
+                        </span>
+                      )}
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                      <PriorityBadge score={issue.priority_score} severity={issue.severity} />
-                      <span className="flex items-center gap-1 text-slate-300">
-                        <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                        {issue.address ? issue.address.split(',')[0] : 'GPS Mapped'}
+                    <h3 className="text-sm font-semibold text-slate-900 truncate">{item.title}</h3>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="truncate max-w-xs">{item.address || 'GPS Coordinates captured'}</span>
                       </span>
-                      <span>Filed: {formatDate(issue.created_at)}</span>
+                      <span>Lodged: {formatDate(item.created_at)}</span>
+                      {item.support_count > 1 && (
+                        <span className="text-blue-700 font-medium">
+                          {item.support_count} citizens endorsed
+                        </span>
+                      )}
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-400">
-                        <span>Resolution Progress</span>
-                        <span className="font-mono text-cyan-300 font-bold">{issue.progress_percentage || 0}%</span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                        <div
-                          className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500"
-                          style={{ width: `${issue.progress_percentage || 0}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                      <strong className="text-slate-300">Latest Action:</strong> {issue.latest_update || 'Complaint routed to department lead.'}
-                    </p>
                   </div>
 
-                  {/* Actions Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-                    <span className="text-slate-400">
-                      {issue.support_count || 1} community endorsement(s)
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {(issue.status === IssueStatus.RESOLUTION_SUBMITTED || issue.status === IssueStatus.CITIZEN_VERIFICATION) && (
-                        <button
-                          type="button"
-                          onClick={() => setVerifyingIssue(issue)}
-                          className="text-teal-400 font-bold hover:underline flex items-center gap-1"
-                        >
-                          <CheckSquare className="w-3.5 h-3.5" /> Verify Repair
-                        </button>
-                      )}
-                      <Link to={`/issue/${issue.id}`} className="text-cyan-400 font-semibold hover:underline">
-                        Details
-                      </Link>
-                      <Link to={`/issue/${issue.id}/track`} className="text-emerald-400 font-semibold hover:underline">
-                        Live Tracking
-                      </Link>
-                    </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.status === IssueStatus.RESOLUTION_SUBMITTED && (
+                      <button
+                        onClick={() => setVerifyingIssue(item)}
+                        className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5" />
+                        <span>Verify Fix</span>
+                      </button>
+                    )}
+                    <Link
+                      to={`/issue/${item.id}`}
+                      className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
+                    </Link>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+      </div>
 
-        {/* 4. VERIFICATION MODAL */}
-        {verifyingIssue && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-teal-500/50 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2 text-teal-400 font-bold">
-                  <CheckSquare className="w-5 h-5" />
-                  <span>Ground Repair Verification — Ticket #{verifyingIssue.id}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setVerifyingIssue(null)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-
+      {/* Citizen Ground Resolution Verification Modal */}
+      {verifyingIssue && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h4 className="text-base font-bold text-white">{verifyingIssue.title}</h4>
-                <p className="text-xs text-slate-400 mt-0.5">{verifyingIssue.address}</p>
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Ground Audit Mandate</span>
+                <h3 className="text-base font-bold text-slate-900">Verify Resolution for #{verifyingIssue.id}</h3>
+              </div>
+              <button
+                onClick={() => setVerifyingIssue(null)}
+                className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-xs text-slate-600 leading-relaxed">
+                The municipal department has uploaded repair photographic evidence and completed work on this complaint.
+                Please review the evidence below and confirm if the defect has been remediated on ground.
               </div>
 
-              {/* Before vs After Photos */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-rose-400">Original Defect Photo</span>
-                  <div className="h-44 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                    <img
-                      src={verifyingIssue.images?.[0]?.original_image_path || '/uploads/original/sample_infra.jpg'}
-                      alt="Before Repair"
-                      className="w-full h-full object-cover"
-                    />
+              {/* Evidence Comparison Display */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <div className="text-[11px] font-semibold text-slate-600">Initial Defect Photo</div>
+                  <div className="h-28 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                    {verifyingIssue.images && verifyingIssue.images[0] ? (
+                      <img
+                        src={verifyingIssue.images[0].original_image_path}
+                        alt="Initial defect"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-400">Photo on record</span>
+                    )}
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-emerald-400">Official After-Repair Photo</span>
-                  <div className="h-44 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                    <img
-                      src={verifyingIssue.resolution_image_path || '/uploads/original/sample_infra.jpg'}
-                      alt="After Repair"
-                      className="w-full h-full object-cover"
-                    />
+
+                <div className="space-y-1">
+                  <div className="text-[11px] font-semibold text-emerald-800">Officer Repair Evidence</div>
+                  <div className="h-28 rounded-lg bg-emerald-50 border border-emerald-200 overflow-hidden flex items-center justify-center">
+                    {verifyingIssue.resolution_image_path ? (
+                      <img
+                        src={verifyingIssue.resolution_image_path}
+                        alt="Resolution proof"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="text-xs text-emerald-700">Repair photo submitted</span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Officer Notes & AI Verification */}
               {verifyingIssue.resolution_notes && (
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-                  <span className="text-slate-400 font-semibold">Department Officer Notes:</span>
-                  <p className="text-slate-200">{verifyingIssue.resolution_notes}</p>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                  <span className="font-semibold text-slate-700">Officer Work Notes: </span>
+                  <span className="text-slate-600">{verifyingIssue.resolution_notes}</span>
                 </div>
               )}
 
-              {/* Feedback Inputs */}
-              <div className="space-y-3 pt-2">
-                <label className="text-xs font-semibold text-slate-300">
-                  Citizen Ground Feedback (Optional if confirming) / Reopen Reason (Required if rejecting):
+              {/* Feedback Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Your Verification Feedback (Optional)
                 </label>
                 <textarea
                   rows={2}
                   value={feedbackNotes}
                   onChange={(e) => setFeedbackNotes(e.target.value)}
-                  placeholder="e.g. Cleanly repaired, no potholes remain / Pothole only half filled, debris on road..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g., Visited site, asphalt patch is completed and road is smooth."
+                  className="w-full p-2.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
                 />
               </div>
 
-              {/* Decision Buttons */}
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => handleConfirmResolution(false)}
-                  disabled={actionLoading}
-                  className="px-4 py-2.5 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 font-bold text-xs flex items-center gap-1.5 border border-rose-700 transition-colors"
-                >
-                  <XCircle className="w-4 h-4" /> Reject & Reopen Complaint
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleConfirmResolution(true)}
-                  disabled={actionLoading}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-colors"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Confirm Ground Fix & Resolve
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  If Reopening, State Reason:
+                </label>
+                <input
+                  type="text"
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  placeholder="e.g., Pothole only partially filled, road still damaged."
+                  className="w-full p-2 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-rose-600"
+                />
               </div>
             </div>
+
+            {/* Modal Actions */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                disabled={actionLoading}
+                onClick={() => handleConfirmResolution(true)}
+                className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirm Resolved</span>
+              </button>
+              <button
+                disabled={actionLoading}
+                onClick={() => handleConfirmResolution(false)}
+                className="w-full py-2.5 rounded-lg bg-white border border-rose-300 text-rose-700 hover:bg-rose-50 font-semibold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Reopen Ticket</span>
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

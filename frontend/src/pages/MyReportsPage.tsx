@@ -6,7 +6,7 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { StatusBadge } from '../components/common/StatusBadge';
 import {
   Search, Filter, MapPin, PlusCircle, ArrowRight, Clock,
-  RefreshCw, CheckSquare
+  RefreshCw, CheckSquare, Eye
 } from 'lucide-react';
 
 export const MyReportsPage: React.FC = () => {
@@ -38,41 +38,41 @@ export const MyReportsPage: React.FC = () => {
   }, [status, category, severity, sort]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">My Civic Reports</h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Civic Reports</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
               Complete history of civic infrastructure issues filed from your NagarSetu account.
             </p>
           </div>
           <Link
             to="/report"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-cyan-950 transition-all"
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-2 shadow-xs transition-colors"
           >
             <PlusCircle className="w-4 h-4" /> Report New Issue
           </Link>
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadReports()}
-              placeholder="Search complaint title..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+              placeholder="Search title..."
+              className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
             />
           </div>
 
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
           >
             <option value="">All Statuses</option>
             {Object.values(IssueStatus).map((v) => (
@@ -83,7 +83,7 @@ export const MyReportsPage: React.FC = () => {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
           >
             <option value="">All Categories</option>
             {Object.values(IssueType).map((v) => (
@@ -94,7 +94,7 @@ export const MyReportsPage: React.FC = () => {
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
           >
             <option value="">All Severities</option>
             {Object.values(SeverityLevel).map((v) => (
@@ -105,87 +105,88 @@ export const MyReportsPage: React.FC = () => {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
           >
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
+            <option value="newest">Sort: Newest First</option>
+            <option value="oldest">Sort: Oldest First</option>
           </select>
         </div>
 
-        {/* Reports List */}
-        {loading ? (
-          <div className="py-16 text-center text-slate-400 flex items-center justify-center gap-2">
-            <RefreshCw className="w-5 h-5 text-cyan-400 animate-spin" />
-            <span>Loading your reports...</span>
+        {/* Reports Listing */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Complaints ({items.length})
+            </span>
+            <button
+              onClick={loadReports}
+              className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-12 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-3">
-            <p className="text-slate-400 text-sm">No complaints match your active filter criteria.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((i) => (
-              <div
-                key={i.id}
-                className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div className="space-y-1.5 flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-mono text-slate-500">Ticket #{i.id}</span>
-                    <PriorityBadge score={i.priority_score} severity={i.severity} />
-                    <StatusBadge status={i.status} />
-                    {i.support_count && i.support_count > 1 && (
-                      <span className="text-[10px] text-teal-300 font-semibold bg-teal-950 px-2 py-0.5 rounded border border-teal-800">
-                        {i.support_count} Endorsements
+
+          {loading ? (
+            <div className="p-12 text-center text-slate-500">
+              <RefreshCw className="w-5 h-5 text-blue-600 animate-spin mx-auto mb-2" />
+              <div className="text-xs">Loading reports...</div>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 text-xs">
+              No civic complaints matched your filters.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {items.map((item) => (
+                <div key={item.id} className="p-4 sm:p-5 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-400">#{item.id}</span>
+                      <StatusBadge status={item.status} />
+                      <PriorityBadge score={item.priority_score} severity={item.severity} />
+                      {item.department && (
+                        <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                          {item.department.name}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{item.address || 'GPS Coordinates captured'}</span>
                       </span>
-                    )}
+                      <span>Filed: {new Date(item.created_at).toLocaleDateString('en-IN')}</span>
+                      {item.support_count > 1 && (
+                        <span className="text-blue-700 font-medium">
+                          {item.support_count} citizen endorsements
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="font-bold text-white text-base hover:text-cyan-300 transition-colors truncate">
-                    <Link to={`/issue/${i.id}`}>{i.title}</Link>
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                    <span className="text-cyan-400">{i.issue_type}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                      {i.address || 'GPS Mapped'}
-                    </span>
-                    <span>•</span>
-                    <span>Filed: {new Date(i.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
 
-                <div className="w-full md:w-44 space-y-1">
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>Progress</span>
-                    <span className="font-mono text-cyan-300">{i.progress_percentage || 0}%</span>
-                  </div>
-                  <div className="h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full"
-                      style={{ width: `${i.progress_percentage || 0}%` }}
-                    />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      to={`/issue/${item.id}`}
+                      className="px-3 py-1.5 rounded-md bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
+                    </Link>
+                    <Link
+                      to={`/issue/${item.id}/track`}
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Track</span>
+                    </Link>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 text-xs font-semibold shrink-0">
-                  <Link
-                    to={`/issue/${i.id}`}
-                    className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-slate-800 transition-colors"
-                  >
-                    View Details
-                  </Link>
-                  <Link
-                    to={`/issue/${i.id}/track`}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors"
-                  >
-                    Track Live
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

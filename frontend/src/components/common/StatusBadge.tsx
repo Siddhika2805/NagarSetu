@@ -10,31 +10,31 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     const s = String(status).toUpperCase();
     switch (s) {
       case 'RESOLVED':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
+      case 'CLOSED':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'RESOLUTION_SUBMITTED':
       case 'CITIZEN_VERIFICATION':
-        return 'bg-teal-500/20 text-teal-300 border-teal-500/50 animate-pulse';
+        return 'bg-blue-50 text-blue-700 border-blue-200 font-semibold ring-1 ring-blue-500/20';
       case 'IN_PROGRESS':
-        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50';
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'ACCEPTED':
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'ASSIGNED':
-        return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50';
+        return 'bg-violet-50 text-violet-700 border-violet-200';
       case 'UNDER_REVIEW':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/50';
+        return 'bg-slate-100 text-slate-700 border-slate-300';
       case 'AWAITING_INSPECTION':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/50';
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'REOPENED':
-        return 'bg-rose-500/20 text-rose-300 border-rose-500/50 font-bold';
+        return 'bg-rose-50 text-rose-700 border-rose-200 font-bold';
       case 'REJECTED':
-      case 'CLOSED':
-        return 'bg-slate-700/40 text-slate-400 border-slate-600/50';
+        return 'bg-slate-100 text-slate-500 border-slate-200 line-through';
       case 'AI_ANALYZED':
-        return 'bg-sky-500/20 text-sky-300 border-sky-500/50';
+        return 'bg-cyan-50 text-cyan-800 border-cyan-200';
       case 'SUBMITTED':
       case 'REPORTED':
       default:
-        return 'bg-slate-500/20 text-slate-300 border-slate-500/50';
+        return 'bg-slate-100 text-slate-600 border-slate-200';
     }
   };
 
@@ -53,7 +53,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded border text-xs font-semibold tracking-wide ${getStyle()}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border tracking-wide uppercase ${getStyle()}`}>
       {getLabel()}
     </span>
   );

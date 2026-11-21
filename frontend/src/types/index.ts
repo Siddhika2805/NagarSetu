@@ -50,6 +50,7 @@ export interface User {
   email: string;
   role: UserRole;
   department_id?: number | null;
+  department?: Department | null;
   created_at: string;
 }
 
@@ -94,6 +95,7 @@ export interface NLPAnalysisResult {
   is_urgent: boolean;
   urgency_keywords: string[];
   matched_keywords: string[];
+  extracted_keywords?: string[];
   extracted_location_references: string[];
   suggested_title: string;
   structured_problem: string;
@@ -227,14 +229,18 @@ export interface MapPoint {
 
 export interface DepartmentStat {
   department_id: number;
+  id?: number;
   department_name: string;
+  name?: string;
   department_code?: string;
+  code?: string;
   total_assigned: number;
   active_count?: number;
   pending: number;
   in_progress: number;
   resolved: number;
   resolution_rate: number;
+  avg_resolution_hours?: number;
   overdue_count?: number;
 }
 
@@ -243,11 +249,13 @@ export interface PredictiveHotspot {
   latitude: number;
   longitude: number;
   address: string;
+  location_name?: string;
   total_complaints: number;
   unresolved_complaints: number;
   critical_complaints: number;
   reopened_complaints: number;
   dominant_category: string;
+  dominant_issue_type?: string;
   risk_score: number;
   risk_level: string;
   risk_color: string;
@@ -255,6 +263,7 @@ export interface PredictiveHotspot {
   confidence: number;
   forecast_period: string;
   preventive_action: string;
+  preventive_recommendation?: string;
   methodology_note: string;
 }
 
@@ -266,11 +275,15 @@ export interface AnalyticsDashboardData {
   critical_issues_count: number;
   reopened_count?: number;
   escalated_count?: number;
+  resolution_rate?: number;
+  sla_breached_count?: number;
+  citizen_verified_count?: number;
   average_resolution_hours?: number;
   issues_by_category: Record<string, number>;
   issues_by_severity: Record<string, number>;
   issues_by_status: Record<string, number>;
   department_performance: DepartmentStat[];
+  departments?: DepartmentStat[];
   predictive_hotspots?: PredictiveHotspot[];
 }
 

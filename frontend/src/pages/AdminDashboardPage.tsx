@@ -3,8 +3,8 @@ import { analyticsService } from '../services/api';
 import { AnalyticsDashboardData, PredictiveHotspot } from '../types';
 import {
   LayoutDashboard, AlertOctagon, CheckCircle2, Clock, Activity,
-  Building2, ShieldCheck, ArrowUpRight, AlertTriangle, Sparkles,
-  TrendingUp, MapPin, RefreshCw, BarChart2, CheckSquare
+  Building2, ShieldCheck, ArrowUpRight, AlertTriangle,
+  TrendingUp, MapPin, RefreshCw, BarChart2, CheckSquare, Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -33,267 +33,212 @@ export const AdminDashboardPage: React.FC = () => {
 
   if (loading || !data) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
-          <span>Loading NagarSetu Municipal Command Center...</span>
+      <div className="min-h-[70vh] flex items-center justify-center text-slate-500">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+          <span className="text-sm font-medium">Loading Municipal Command Center...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/70 border border-purple-800 text-purple-300 text-xs font-semibold mb-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-purple-400" /> NAGARSETU MUNICIPAL COMMAND CENTER
+    <div className="bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Bar */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+              <Shield className="w-3.5 h-3.5 text-blue-700" />
+              <span>NAGARSETU MUNICIPAL COMMAND CENTER</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               City-Wide Civic Intelligence & Accountability
             </h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-xs text-slate-500">
               Cross-departmental monitoring, predictive failure hotspot forecasting, and SLA resolution enforcement.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={fetchAdminData}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-xs"
+              title="Refresh Live Data"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh Live
+              <RefreshCw className="w-4 h-4" />
             </button>
             <Link
               to="/admin/issues"
-              className="px-5 py-2.5 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-950 flex items-center gap-2 text-sm transition-all"
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-colors"
             >
-              <LayoutDashboard className="w-4 h-4" /> Manage All Issues & SLA
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Manage All Issues & SLA</span>
             </Link>
           </div>
         </div>
 
         {/* 1. TOP-LINE KPI METRICS */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Total Complaints</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{data.total_issues}</div>
-            <div className="text-[10px] text-slate-500">City-wide cumulative</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Complaints</div>
+            <div className="text-2xl font-bold text-slate-900 mt-1 font-mono">{data.total_issues}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">City-wide cumulative</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Pending Action</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">{data.open_issues}</div>
-            <div className="text-[10px] text-slate-500">Across 6 departments</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Pending Action</div>
+            <div className="text-2xl font-bold text-amber-700 mt-1 font-mono">{data.open_issues}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Under department review</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">In Progress</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono">{data.in_progress_issues}</div>
-            <div className="text-[10px] text-slate-500">Dispatched work crews</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resolved</div>
+            <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">{data.resolved_issues}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">With photo evidence</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Resolved & Verified</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">{data.resolved_issues}</div>
-            <div className="text-[10px] text-slate-500">Ground verified</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resolution Rate</div>
+            <div className="text-2xl font-bold text-blue-700 mt-1 font-mono">
+              {data.resolution_rate ?? (data.total_issues ? Math.round((data.resolved_issues / data.total_issues) * 100) : 0)}%
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Completed successfully</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">SLA Escalated / Overdue</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-400 font-mono">{data.escalated_count || 0}</div>
-            <div className="text-[10px] text-rose-400 font-medium">Deadline breached</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">SLA Overdue</div>
+            <div className="text-2xl font-bold text-rose-700 mt-1 font-mono">{data.sla_breached_count || 0}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Escalated tickets</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-1">
-            <div className="text-xs text-slate-400 font-medium">Citizen Reopened</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono">{data.reopened_count || 0}</div>
-            <div className="text-[10px] text-slate-500">Repair rejected by citizen</div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">Citizen Verified</div>
+            <div className="text-2xl font-bold text-indigo-700 mt-1 font-mono">{data.citizen_verified_count || 0}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Ground-truth confirmed</div>
           </div>
         </div>
 
-        {/* 2. PREDICTIVE CIVIC INTELLIGENCE (NEW FEATURE 10) */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900/90 to-purple-950/30 border border-purple-800/60 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        {/* 2. DEPARTMENT PERFORMANCE & SLA SCORECARDS */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 text-purple-300 font-bold text-base">
-                <TrendingUp className="w-5 h-5 text-purple-400" />
-                <span>Predictive Civic Hotspots & Failure Recurrence Forecast</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Spatial kernel density and seasonal failure patterns forecasting high-risk civic infrastructure clusters.
-              </p>
+              <h2 className="text-sm font-bold text-slate-900">Department Resolution Scorecards</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time SLA compliance tracking across municipal divisions</p>
             </div>
-            <span className="text-xs bg-purple-950 text-purple-300 px-3 py-1 rounded-full border border-purple-800 font-semibold">
-              Statistical Confidence: 82%
-            </span>
-          </div>
-
-          {hotspots.length === 0 ? (
-            <div className="text-center py-6 text-xs text-slate-500">
-              Collecting spatial defect density across city wards...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {hotspots.slice(0, 3).map((h) => (
-                <div
-                  key={h.cluster_id}
-                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 relative overflow-hidden"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                      {h.address.split(',')[0]}
-                    </span>
-                    <span
-                      className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: `${h.risk_color}25`,
-                        color: h.risk_color,
-                        border: `1px solid ${h.risk_color}60`
-                      }}
-                    >
-                      {h.risk_level} Risk
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2 rounded-lg bg-slate-900">
-                      <span className="text-[10px] text-slate-400 block">Recurrence Prob.</span>
-                      <strong className="text-white font-mono text-sm">{h.recurrence_probability}</strong>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-900">
-                      <span className="text-[10px] text-slate-400 block">Forecast Horizon</span>
-                      <strong className="text-cyan-300 text-xs">{h.forecast_period}</strong>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                    <strong className="text-purple-300">Preventive Action:</strong> {h.preventive_action}
-                  </p>
-
-                  <div className="text-[10px] text-slate-500 italic">
-                    Historical density: {h.total_complaints} incidents ({h.dominant_category})
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="text-[11px] text-slate-500 italic">
-            * Methodology Note: Predictions are based on spatial density of unresolved and recurring defects. NagarSetu transparently provides forecasting guidance without asserting unverified guarantees.
-          </p>
-        </div>
-
-        {/* 3. CATEGORY & SEVERITY CHARTS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Category Breakdown */}
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-cyan-400" />
-              Incidents by AI Defect Category
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(data.issues_by_category).map(([cat, count]) => {
-                const pct = data.total_issues > 0 ? (count / data.total_issues) * 100 : 0;
-                return (
-                  <div key={cat} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-300">{cat}</span>
-                      <span className="text-cyan-400 font-mono">
-                        {count} ({pct.toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-500 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Severity Breakdown */}
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <AlertOctagon className="w-4 h-4 text-rose-400" />
-              Severity Classification
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(data.issues_by_severity).map(([sev, count]) => {
-                const pct = data.total_issues > 0 ? (count / data.total_issues) * 100 : 0;
-                const color =
-                  sev === 'CRITICAL'
-                    ? 'bg-rose-500'
-                    : sev === 'HIGH'
-                    ? 'bg-amber-500'
-                    : sev === 'MODERATE' || sev === 'MEDIUM'
-                    ? 'bg-sky-500'
-                    : 'bg-emerald-500';
-                return (
-                  <div key={sev} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-300">{sev}</span>
-                      <span className="text-white font-mono">
-                        {count} ({pct.toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
-                      <div className={`h-full ${color} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* 4. DEPARTMENTAL WORKLOAD & SLA SCORECARDS */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-purple-400" />
-              Department SLA Compliance & Workload Scorecards
-            </h3>
-            <span className="text-xs text-slate-400">All 6 Municipal Departments</span>
+            <span className="text-xs text-slate-400">Target: Critical 24h • High 48h</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-950 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 uppercase font-semibold tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Department Name</th>
-                  <th className="py-3 px-4">Assigned Tasks</th>
-                  <th className="py-3 px-4">Pending</th>
-                  <th className="py-3 px-4">In Progress</th>
-                  <th className="py-3 px-4">Resolved</th>
-                  <th className="py-3 px-4">SLA Overdue</th>
-                  <th className="py-3 px-4">Resolution Rate</th>
+                  <th className="py-3 px-5">Department Name</th>
+                  <th className="py-3 px-4">Code</th>
+                  <th className="py-3 px-4 text-center">Assigned</th>
+                  <th className="py-3 px-4 text-center">Active</th>
+                  <th className="py-3 px-4 text-center">Resolved</th>
+                  <th className="py-3 px-4 text-center">SLA Rate</th>
+                  <th className="py-3 px-5 text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-200">
-                {data.department_performance.map((dept) => (
-                  <tr key={dept.department_id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="py-3 px-4 font-semibold text-white">{dept.department_name}</td>
-                    <td className="py-3 px-4 font-mono">{dept.total_assigned}</td>
-                    <td className="py-3 px-4 text-amber-400 font-semibold font-mono">{dept.pending}</td>
-                    <td className="py-3 px-4 text-cyan-400 font-semibold font-mono">{dept.in_progress}</td>
-                    <td className="py-3 px-4 text-emerald-400 font-semibold font-mono">{dept.resolved}</td>
-                    <td className="py-3 px-4 font-mono">
-                      {(dept.overdue_count || 0) > 0 ? (
-                        <span className="text-rose-400 font-bold bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
-                          {dept.overdue_count} Overdue
+              <tbody className="divide-y divide-slate-100">
+                {(data.departments || data.department_performance || []).map((dept: any) => {
+                  const rate = dept.resolution_rate || 0;
+                  return (
+                    <tr key={dept.id || dept.department_id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-5 font-semibold text-slate-900">
+                        {dept.name || dept.department_name}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-500">
+                        {dept.code || dept.department_code}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-medium text-slate-700">
+                        {dept.total_assigned}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-medium text-amber-700">
+                        {dept.active_count || (dept.total_assigned - dept.resolved)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-medium text-emerald-700">
+                        {dept.resolved}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900">
+                        {rate}%
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                            rate >= 80
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : rate >= 50
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          {rate >= 80 ? 'Optimal' : rate >= 50 ? 'Moderate' : 'Needs Attention'}
                         </span>
-                      ) : (
-                        <span className="text-emerald-400 font-semibold">0 on time</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-purple-300 font-mono">{dept.resolution_rate}%</td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* 3. PREDICTIVE CIVIC INTELLIGENCE (DBSCAN HOTSPOTS) */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 uppercase tracking-wide">
+                <TrendingUp className="w-4 h-4" />
+                <span>Predictive Failure Hotspot Clusters (DBSCAN Density Analysis)</span>
+              </div>
+              <h2 className="text-base font-bold text-slate-900 mt-0.5">Preventive Municipal Maintenance Guidance</h2>
+            </div>
+            <Link
+              to="/map"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <span>View On Interactive Map</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {hotspots.slice(0, 6).map((hot) => (
+              <div
+                key={hot.cluster_id}
+                className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-slate-500 uppercase">{hot.cluster_id}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
+                      hot.risk_level === 'HIGH'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : hot.risk_level === 'MEDIUM'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}
+                  >
+                    {hot.risk_level} RISK
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 truncate">{hot.location_name || hot.address}</h3>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Dominant: <strong className="text-slate-700">{hot.dominant_issue_type || hot.dominant_category}</strong> • Recurrence: <strong className="font-mono text-slate-800">{hot.recurrence_probability}%</strong>
+                  </div>
+                </div>
+
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
+                  <span className="font-semibold text-slate-800">Recommendation: </span>
+                  {hot.preventive_recommendation || hot.preventive_action}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

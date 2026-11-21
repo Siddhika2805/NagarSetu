@@ -5,33 +5,33 @@ import { issueService, analyticsService } from '../services/api';
 import { MapPoint, IssueType, IssueStatus, PredictiveHotspot } from '../types';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { MapPin, Filter, Search, Eye, Cpu, RefreshCw, Flame, Users, Clock, AlertTriangle } from 'lucide-react';
+import { MapPin, Filter, Search, Eye, Cpu, RefreshCw, Flame, Users, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const createCustomIcon = (color: string, isOverdue: boolean) => {
-  const borderCol = isOverdue ? '#ef4444' : 'white';
-  const anim = isOverdue ? 'animation: pulse 1s infinite;' : '';
+const createCustomIcon = (color: string, isOverdue: boolean = false) => {
+  const borderCol = isOverdue ? '#ef4444' : '#ffffff';
+  const shadow = isOverdue ? 'box-shadow: 0 0 8px #ef4444;' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.2);';
   return L.divIcon({
     className: 'custom-map-marker',
-    html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid ${borderCol}; box-shadow: 0 0 12px ${color}; ${anim}"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid ${borderCol}; ${shadow}"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 };
 
 const categoryColors: Record<string, string> = {
-  'Pothole': '#f97316',
-  'Damaged Road': '#ea580c',
-  'Garbage Accumulation': '#eab308',
-  'Overflowing Dustbin': '#ca8a04',
-  'Water Leakage': '#06b6d4',
-  'Drainage Blockage': '#a855f7',
-  'Waterlogging': '#3b82f6',
-  'Damaged Streetlight': '#facc15',
-  'Exposed Electrical Wire': '#ef4444',
-  'Open Manhole': '#dc2626',
-  'Broken Public Infrastructure': '#14b8a6',
-  'Other Civic Problem': '#64748b'
+  'Pothole': '#ea580c',
+  'Damaged Road': '#c2410c',
+  'Garbage Accumulation': '#d97706',
+  'Overflowing Dustbin': '#b45309',
+  'Water Leakage': '#0284c7',
+  'Drainage Blockage': '#7c3aed',
+  'Waterlogging': '#2563eb',
+  'Damaged Streetlight': '#ca8a04',
+  'Exposed Electrical Wire': '#dc2626',
+  'Open Manhole': '#b91c1c',
+  'Broken Public Infrastructure': '#0d9488',
+  'Other Civic Problem': '#475569'
 };
 
 export const PublicIssueMapPage: React.FC = () => {
@@ -78,48 +78,48 @@ export const PublicIssueMapPage: React.FC = () => {
   });
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col relative overflow-hidden bg-slate-950 font-sans">
+    <div className="h-[calc(100vh-4rem)] flex flex-col relative overflow-hidden bg-slate-50 font-sans">
       {/* Filter Header Bar */}
-      <div className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 p-4 z-20">
+      <div className="bg-white border-b border-slate-200 p-4 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/30">
-              <MapPin className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-700 border border-blue-200">
+              <MapPin className="w-4 h-4" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-white leading-tight flex items-center gap-2">
-                NagarSetu Smart Infrastructure Map
-                <span className="text-[10px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-800 font-mono">
+              <h1 className="text-sm font-bold text-slate-900 leading-tight flex items-center gap-2">
+                <span>NagarSetu Smart Infrastructure Map</span>
+                <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.2 rounded border border-slate-200 font-mono font-semibold">
                   {filteredPoints.length} Live Points
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">Geospatial civic tracking with predictive recurrence hotspot analytics</p>
+              <p className="text-[11px] text-slate-500">Geospatial civic tracking with predictive recurrence hotspot analytics</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Toggle Predictive Hotspots */}
             <button
               onClick={() => setShowHotspots(!showHotspots)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs ${
                 showHotspots
-                  ? 'bg-purple-900/60 text-purple-200 border border-purple-600'
-                  : 'bg-slate-950 text-slate-400 border border-slate-800'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <Flame className="w-3.5 h-3.5 text-purple-400" />
-              {showHotspots ? 'Predictive Clusters Active' : 'Show Predictive Clusters'}
+              <Flame className="w-3.5 h-3.5 text-blue-600" />
+              <span>{showHotspots ? 'Hotspots Active' : 'Show Hotspots'}</span>
             </button>
 
             {/* Search Input */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <input
                 type="text"
                 placeholder="Search area/landmark..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500 w-40 sm:w-52"
+                className="bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600 w-40 sm:w-48"
               />
             </div>
 
@@ -127,9 +127,9 @@ export const PublicIssueMapPage: React.FC = () => {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
             >
-              <option value="ALL">All Civic Categories</option>
+              <option value="ALL">All Categories</option>
               {Object.values(IssueType).map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -139,7 +139,7 @@ export const PublicIssueMapPage: React.FC = () => {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
             >
               <option value="ALL">All Statuses</option>
               {Object.values(IssueStatus).map((s) => (
@@ -149,7 +149,7 @@ export const PublicIssueMapPage: React.FC = () => {
 
             <button
               onClick={loadMapData}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+              className="p-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 transition-colors shadow-xs"
               title="Refresh Map Data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -180,113 +180,89 @@ export const PublicIssueMapPage: React.FC = () => {
                 radius={220}
                 pathOptions={{
                   fillColor: h.risk_color,
-                  fillOpacity: 0.18,
+                  fillOpacity: 0.16,
                   color: h.risk_color,
                   weight: 2,
                   dashArray: '4, 6',
                 }}
               >
                 <Popup minWidth={240}>
-                  <div className="p-1 space-y-1.5 text-xs">
-                    <div className="font-bold text-white flex items-center justify-between">
-                      <span>Predictive Defect Hotspot</span>
+                  <div className="p-1 space-y-1.5 text-xs font-sans">
+                    <div className="font-bold text-slate-900 flex items-center justify-between">
+                      <span>Predictive Hotspot</span>
                       <span
-                        className="px-2 py-0.5 rounded text-[10px] font-black uppercase"
-                        style={{ backgroundColor: `${h.risk_color}30`, color: h.risk_color }}
+                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                        style={{ backgroundColor: `${h.risk_color}20`, color: h.risk_color }}
                       >
                         {h.risk_level} Risk
                       </span>
                     </div>
-                    <p className="text-slate-300 font-medium">{h.address}</p>
-                    <div className="text-[11px] text-slate-400">
-                      Recurrence probability: <strong className="text-white">{h.recurrence_probability}</strong> ({h.forecast_period})
+                    <p className="text-slate-600 font-medium">{h.address}</p>
+                    <div className="text-[11px] text-slate-500">
+                      Dominant: <strong className="text-slate-800">{h.dominant_issue_type}</strong>
                     </div>
-                    <div className="p-2 rounded bg-slate-900 border border-slate-800 text-[10px] text-purple-300">
-                      <strong>Recommendation:</strong> {h.preventive_action}
+                    <div className="text-[11px] text-slate-500">
+                      Recurrence Probability: <strong className="text-slate-800 font-mono">{h.recurrence_probability}%</strong>
                     </div>
+                    <p className="text-[11px] text-slate-600 italic bg-slate-50 p-1.5 rounded border border-slate-200">
+                      {h.preventive_recommendation}
+                    </p>
                   </div>
                 </Popup>
               </Circle>
             ))}
 
-          {/* Issue Markers */}
+          {/* Render All Filtered Civic Defect Points */}
           {filteredPoints.map((pt) => {
-            const markerColor = categoryColors[pt.issue_type] || '#10b981';
+            const color = categoryColors[pt.issue_type] || '#2563eb';
+            const icon = createCustomIcon(color, pt.is_overdue);
+
             return (
               <Marker
                 key={pt.id}
                 position={[pt.latitude, pt.longitude]}
-                icon={createCustomIcon(markerColor, Boolean(pt.is_overdue))}
+                icon={icon}
               >
-                <Popup minWidth={270} maxWidth={320}>
-                  <div className="p-1 space-y-2">
-                    {pt.image_url && (
-                      <div className="rounded-lg overflow-hidden max-h-32 bg-slate-950">
-                        <img src={pt.image_url} alt={pt.title} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wide">
-                          {pt.issue_type}
-                        </span>
-                        <StatusBadge status={pt.status} />
-                      </div>
-                      <h4 className="text-xs font-bold text-white line-clamp-1">{pt.title}</h4>
-                      <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{pt.address}</p>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-1">
-                        <span>{pt.department || 'Dept Assigned'}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400 font-medium">{pt.support_count || 1} Citizen Endorsements</span>
-                      </div>
+                <Popup minWidth={260} maxWidth={320}>
+                  <div className="p-1.5 space-y-2 text-xs font-sans">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
+                      <span className="font-mono font-bold text-slate-500">#{pt.id}</span>
+                      <StatusBadge status={pt.status} />
+                    </div>
+
+                    <h3 className="font-bold text-slate-900 text-sm leading-snug">{pt.title}</h3>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <PriorityBadge score={pt.priority_score} severity={pt.severity} />
                       {pt.is_overdue && (
-                        <div className="mt-1 text-[10px] text-rose-400 font-bold bg-rose-950/60 p-1 rounded border border-rose-800">
-                          ⚠️ Department SLA Overdue
-                        </div>
+                        <span className="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded font-bold border border-rose-200">
+                          OVERDUE
+                        </span>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-700">
-                      <PriorityBadge score={pt.priority_score} severity={pt.severity} />
-                      <Link
-                        to={`/issue/${pt.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-cyan-400 hover:underline"
-                      >
-                        Inspect Evidence <Eye className="w-3 h-3" />
-                      </Link>
+                    <p className="text-slate-600 text-xs">{pt.description}</p>
+
+                    <div className="pt-1 text-[11px] text-slate-500 space-y-0.5 border-t border-slate-100">
+                      <div>Location: <span className="font-medium text-slate-800">{pt.address || 'GPS Location'}</span></div>
+                      {pt.department && (
+                        <div>Department: <span className="font-medium text-blue-700">{pt.department}</span></div>
+                      )}
+                      <div>Community Endorsements: <span className="font-bold text-emerald-700">{pt.support_count}</span></div>
                     </div>
+
+                    <Link
+                      to={`/issue/${pt.id}`}
+                      className="block text-center w-full py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-xs"
+                    >
+                      Inspect Full Resolution Audit
+                    </Link>
                   </div>
                 </Popup>
               </Marker>
             );
           })}
         </MapContainer>
-
-        {/* Floating Map Legend */}
-        <div className="absolute bottom-6 right-6 z-20 bg-slate-950/95 backdrop-blur-md p-4 rounded-2xl border border-slate-800 hidden sm:block max-w-xs shadow-xl">
-          <h4 className="text-xs font-extrabold text-slate-200 mb-2 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-            Infrastructure Legend
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-            {Object.entries(categoryColors).slice(0, 8).map(([cat, col]) => (
-              <div key={cat} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: col }} />
-                <span className="truncate">{cat}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2.5 pt-2 border-t border-slate-800 text-[10px] text-slate-400 space-y-1">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white" />
-              <span>Red Border: Overdue SLA</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full border border-purple-400 border-dashed" />
-              <span>Dashed Ring: Predicted Defect Hotspot</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

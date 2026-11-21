@@ -60,10 +60,10 @@ export const IssueTrackingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-5 h-5 text-cyan-400 animate-spin" />
-          <span>Tracking complaint resolution lifecycle...</span>
+      <div className="min-h-[70vh] flex items-center justify-center text-slate-500">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+          <span className="text-sm font-medium">Tracking complaint resolution lifecycle...</span>
         </div>
       </div>
     );
@@ -72,8 +72,8 @@ export const IssueTrackingPage: React.FC = () => {
   if (error || !issue) {
     return (
       <div className="max-w-4xl mx-auto p-12 text-center space-y-4">
-        <p className="text-rose-400 font-semibold">{error || 'Complaint not found'}</p>
-        <Link to="/dashboard" className="text-cyan-400 text-sm font-semibold hover:underline">
+        <p className="text-rose-600 font-semibold">{error || 'Complaint not found'}</p>
+        <Link to="/dashboard" className="text-blue-600 text-xs font-semibold hover:underline">
           Return to Citizen Dashboard
         </Link>
       </div>
@@ -83,141 +83,100 @@ export const IssueTrackingPage: React.FC = () => {
   const currentIdx = TRACKING_FLOW.indexOf(issue.status);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="bg-slate-50 text-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-4xl mx-auto space-y-6">
         <Link
           to={`/issue/${issue.id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-400 hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Issue Details
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Issue Overview
         </Link>
 
-        {/* Header */}
-        <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Ticket Header Card */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-cyan-400 font-bold uppercase">
-                Ticket #{issue.id}
-              </span>
-              <PriorityBadge score={issue.priority_score} severity={issue.severity} />
+              <span className="font-mono text-xs font-bold text-slate-500">Ticket #{issue.id}</span>
               <StatusBadge status={issue.status} />
+              <PriorityBadge score={issue.priority_score} severity={issue.severity} />
             </div>
-            <span className="text-xs text-slate-400">
-              Lodged: {new Date(issue.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </span>
+            {issue.department && (
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
+                {issue.department.name}
+              </span>
+            )}
           </div>
-
-          <h1 className="text-2xl font-bold text-white">{issue.title}</h1>
-          <p className="text-xs text-slate-400 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-            {issue.address || `GPS (${issue.latitude}, ${issue.longitude})`}
+          <h1 className="text-xl font-bold text-slate-900">{issue.title}</h1>
+          <p className="text-xs text-slate-500 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+            {issue.address || 'GPS Coordinates on record'}
           </p>
+        </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs">
-            <span className="text-slate-300">
-              Department: <strong className="text-white">{issue.department?.name || 'Road Maintenance'}</strong>
-            </span>
-            <span className="text-teal-300 font-mono font-semibold">
-              SLA Commitment: {issue.sla_hours || 48} Hours
-            </span>
+        {/* Horizontal Lifecycle Steps */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            7-Stage Resolution Lifecycle Progress
+          </h2>
+          <div className="overflow-x-auto pb-2">
+            <div className="flex items-center min-w-[620px] justify-between relative before:absolute before:left-3 before:right-3 before:top-4 before:h-0.5 before:bg-slate-200 before:-z-0">
+              {TRACKING_FLOW.map((st, idx) => {
+                const isPassed = currentIdx >= idx;
+                const isCurrent = currentIdx === idx;
+                return (
+                  <div key={st} className="flex flex-col items-center text-center space-y-2 relative z-10">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                          : isPassed
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-white border-2 border-slate-300 text-slate-400'
+                      }`}
+                    >
+                      {isPassed && !isCurrent ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
+                    </div>
+                    <span
+                      className={`text-[11px] font-semibold max-w-[80px] leading-tight ${
+                        isCurrent ? 'text-blue-700' : isPassed ? 'text-slate-800' : 'text-slate-400'
+                      }`}
+                    >
+                      {st.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Citizen Verification Prompt if resolution submitted */}
-        {issue.status === IssueStatus.RESOLUTION_SUBMITTED && (
-          <div className="p-6 rounded-2xl bg-teal-950/40 border border-teal-500/60 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-teal-300 font-bold">
-                <CheckSquare className="w-5 h-5 text-teal-400" />
-                <span>Ground Repair Verification Required</span>
-              </div>
-              <span className="text-xs bg-teal-900 text-teal-200 px-3 py-1 rounded-full font-mono font-bold">
-                Awaiting Your Confirmation
-              </span>
-            </div>
-            <p className="text-xs text-slate-300">
-              The municipal team has uploaded repair photos. Does the fix meet your satisfaction?
-            </p>
+        {/* Detailed Timeline Events */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600" />
+            <span>Official Resolution Event Log</span>
+          </h2>
 
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Ground confirmation feedback or reopen reason..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
-              />
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleVerify(true)}
-                  disabled={verifying}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Confirm Ground Fix & Close
-                </button>
-                <button
-                  onClick={() => handleVerify(false)}
-                  disabled={verifying}
-                  className="px-4 py-2 rounded-xl bg-rose-900/60 hover:bg-rose-800 text-rose-200 font-bold text-xs flex items-center gap-1.5 border border-rose-700"
-                >
-                  <XCircle className="w-4 h-4" /> Reopen Complaint
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Milestone Stepper */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Clock className="w-4 h-4 text-cyan-400" /> Resolution Milestone Tracking
-          </h3>
-
-          <div className="space-y-6 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-800">
-            {TRACKING_FLOW.map((step, idx) => {
-              const histMatch = [...timeline].reverse().find((t) => t.new_status === step);
-              const isCurrent = issue.status === step;
-              const isPassed = histMatch !== undefined || (currentIdx !== -1 && idx < currentIdx);
-
-              return (
-                <div key={step} className="relative pl-10 space-y-1">
-                  <div
-                    className={`absolute left-1.5 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ring-4 ring-slate-950 ${
-                      isCurrent
-                        ? 'bg-cyan-400 text-slate-950 shadow-md shadow-cyan-400/50'
-                        : isPassed
-                        ? 'bg-emerald-500 text-slate-950'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700'
-                    }`}
-                  >
-                    {isPassed ? '✓' : idx + 1}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <span className={`font-bold ${isCurrent ? 'text-cyan-300' : isPassed ? 'text-slate-200' : 'text-slate-500'}`}>
-                      {step.replace(/_/g, ' ')}
-                    </span>
-                    {histMatch && (
-                      <span className="text-slate-500 font-mono">
-                        {new Date(histMatch.created_at).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-
-                  {histMatch ? (
-                    <p className="text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
-                      {histMatch.notes || 'Status updated.'}
-                    </p>
-                  ) : isCurrent ? (
-                    <p className="text-xs text-cyan-300 bg-cyan-950/40 p-2 rounded-lg border border-cyan-800/60">
-                      Current Active Stage: {issue.latest_update || 'Under departmental action.'}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-slate-600 italic">Pending next operational phase</p>
-                  )}
+          <div className="space-y-4 relative before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+            {timeline.map((evt) => (
+              <div key={evt.id} className="relative pl-8 space-y-1">
+                <div className="absolute left-2 top-1.5 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-white" />
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-900 font-mono">
+                    {evt.new_status?.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-slate-400 font-mono text-[11px]">
+                    {new Date(evt.created_at).toLocaleString('en-IN')}
+                  </span>
                 </div>
-              );
-            })}
+                <p className="text-xs text-slate-600">{evt.notes || 'Status updated by department.'}</p>
+                {evt.changed_by && (
+                  <p className="text-[11px] text-slate-400">
+                    Logged by: {evt.changed_by.full_name} ({evt.changed_by.role})
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
