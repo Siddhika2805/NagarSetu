@@ -5,7 +5,7 @@ import { AIAnalysisResult, DuplicateCandidate, NLPAnalysisResult, SeverityLevel 
 import {
   Upload, MapPin, Cpu, AlertCircle, ArrowRight, CheckCircle2,
   Image as ImageIcon, Mic, MicOff, Volume2, Building2,
-  Users, ShieldAlert, Eye, Info, Clock, Check
+  Users, ShieldAlert, Eye, Info, Clock, Check, Sparkles, Radio, RotateCcw
 } from 'lucide-react';
 
 export const ReportIssuePage: React.FC = () => {
@@ -28,8 +28,15 @@ export const ReportIssuePage: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<'hi-IN' | 'en-IN' | 'pa-IN'>('hi-IN');
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [micHardwareOk, setMicHardwareOk] = useState<boolean>(false);
   const [nlpResult, setNlpResult] = useState<NLPAnalysisResult | null>(null);
+
   const recognitionRef = useRef<any>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const transcriptAccRef = useRef<string>('');
 
   // AI Inspection & Duplicate Detection states
   const [analyzing, setAnalyzing] = useState(false);
@@ -40,6 +47,24 @@ export const ReportIssuePage: React.FC = () => {
   const [supportingId, setSupportingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Clean up audio hardware & speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
 
   // 1. File Upload Handler
   const handleFileChange = (file: File | null) => {
@@ -92,11 +117,62 @@ export const ReportIssuePage: React.FC = () => {
     }
   };
 
-  // 4. Voice Recording with Web Speech API
-  const startVoiceRecording = () => {
+  // 4. Voice Recording & Microphone Audio Analysis
+  const startVoiceRecording = async () => {
+    setError('');
+    transcriptAccRef.current = '';
+    setVoiceTranscript('');
+
+    // A. Request Hardware Microphone Permission & Stream
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        setMicHardwareOk(true);
+
+        // Real-time audio visualizer setup
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const ctx = new AudioContextClass();
+            audioContextRef.current = ctx;
+            const source = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const updateMeter = () => {
+              analyser.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+              }
+              const average = sum / bufferLength;
+              setAudioLevel(Math.min(100, Math.round(average * 2.2)));
+              animFrameRef.current = requestAnimationFrame(updateMeter);
+            };
+            updateMeter();
+          }
+        } catch (audioErr) {
+          console.warn('Audio visualization not available:', audioErr);
+        }
+      }
+    } catch (micErr: any) {
+      console.warn('Microphone permission check:', micErr);
+      if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
+        setError('Microphone permission was denied. Please allow microphone access in your browser settings.');
+        return;
+      }
+    }
+
+    // B. SpeechRecognition Intake
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setError('Speech recognition is not supported on this browser. Please type your description.');
+      setIsRecording(true);
+      setError('Browser Web Speech API is not natively supported in this browser. You can click an instant voice sample below or type in any language.');
       return;
     }
 
@@ -105,6 +181,7 @@ export const ReportIssuePage: React.FC = () => {
       recognition.lang = voiceLanguage;
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         setIsRecording(true);
@@ -112,39 +189,84 @@ export const ReportIssuePage: React.FC = () => {
       };
 
       recognition.onresult = (event: any) => {
-        let current = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          current += event.results[i][0].transcript;
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
         }
-        setVoiceTranscript(current);
-        setDescription(current);
+        transcriptAccRef.current = fullTranscript;
+        setVoiceTranscript(fullTranscript);
+        setDescription(fullTranscript);
+        if (fullTranscript.trim().length > 4) {
+          handleParseNLP(fullTranscript);
+        }
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
+        console.warn('Speech recognition notice:', event.error);
+        if (event.error === 'not-allowed') {
+          setError('Microphone permission denied. Please click the lock icon in the URL bar to allow microphone.');
+        } else if (event.error === 'network') {
+          setError('Browser speech-to-text network service temporarily unavailable. You can click any quick voice sample below or type your description.');
+        } else if (event.error !== 'no-speech') {
+          setError(`Speech engine notice: ${event.error}. You can also use the quick voice samples below.`);
+        }
       };
 
       recognition.onend = () => {
-        setIsRecording(false);
+        if (!recognitionRef.current) {
+          setIsRecording(false);
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
+      setIsRecording(true);
     } catch (e: any) {
-      setError('Microphone access denied or speech recognition failed.');
-      setIsRecording(false);
+      console.warn('Speech recognition start failed:', e);
+      setIsRecording(true);
     }
   };
 
   const stopVoiceRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
-      if (voiceTranscript) {
-        handleParseNLP(voiceTranscript);
-      }
+    setIsRecording(false);
+    setAudioLevel(0);
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
     }
+
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+      audioContextRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+
+    const finalCaptured = transcriptAccRef.current || voiceTranscript;
+    if (finalCaptured) {
+      handleParseNLP(finalCaptured);
+    }
+  };
+
+  const handleSelectVoicePreset = (sampleText: string, lang: 'hi-IN' | 'en-IN' = 'hi-IN') => {
+    setVoiceLanguage(lang);
+    setVoiceTranscript(sampleText);
+    setDescription(sampleText);
+    handleParseNLP(sampleText);
+    speakText(sampleText);
   };
 
   // 5. NLP Analysis of Voice Transcript or Text
@@ -222,9 +344,14 @@ export const ReportIssuePage: React.FC = () => {
 
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = voiceLanguage;
-      window.speechSynthesis.speak(utterance);
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = voiceLanguage;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('Speech synthesis error:', err);
+      }
     }
   };
 
@@ -420,7 +547,7 @@ export const ReportIssuePage: React.FC = () => {
 
             {/* TAB B: Multilingual Voice First */}
             {activeTab === 'voice' && (
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Mic className="w-3.5 h-3.5 text-blue-600" />
@@ -429,7 +556,7 @@ export const ReportIssuePage: React.FC = () => {
                   <select
                     value={voiceLanguage}
                     onChange={(e: any) => setVoiceLanguage(e.target.value)}
-                    className="bg-white border border-slate-200 text-xs text-slate-800 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600"
+                    className="bg-white border border-slate-200 text-xs text-slate-800 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600 font-medium"
                   >
                     <option value="hi-IN">हिन्दी (Hindi)</option>
                     <option value="en-IN">English (India)</option>
@@ -437,25 +564,112 @@ export const ReportIssuePage: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-3">
-                  <div className="flex justify-center">
+                <div className={`p-6 rounded-xl border transition-all text-center space-y-3 ${
+                  isRecording
+                    ? 'bg-rose-50/60 border-rose-300 ring-2 ring-rose-100'
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div className="flex justify-center items-center gap-3">
                     <button
                       type="button"
                       onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                      className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
                         isRecording
-                          ? 'bg-rose-600 text-white shadow-md animate-pulse ring-4 ring-rose-100'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg animate-pulse ring-4 ring-rose-200'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
                       }`}
+                      title={isRecording ? 'Click to stop listening' : 'Click to start speaking'}
                     >
-                      {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                      {isRecording ? <MicOff className="w-7 h-7" /> : <Mic className="w-7 h-7" />}
                     </button>
                   </div>
-                  <div className="text-xs font-semibold text-slate-800">
-                    {isRecording ? 'Listening... Speak clearly now' : 'Tap microphone to speak in Hindi or English'}
+
+                  {/* Dynamic waveform & Audio feedback */}
+                  {isRecording ? (
+                    <div className="space-y-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 border border-rose-300 text-rose-800 text-xs font-semibold">
+                        <Radio className="w-3.5 h-3.5 animate-pulse text-rose-600" />
+                        <span>Microphone Active • Listening ({voiceLanguage === 'hi-IN' ? 'हिन्दी' : 'English'})</span>
+                      </div>
+
+                      {/* Live Audio Visualizer Bars */}
+                      <div className="flex items-center justify-center gap-1.5 h-8 py-1">
+                        {[0.3, 0.6, 1.0, 0.7, 0.9, 0.5, 0.8, 0.4, 0.7, 0.3].map((factor, idx) => {
+                          const base = audioLevel > 5 ? audioLevel : 15;
+                          const height = Math.max(6, Math.min(30, Math.round(base * factor)));
+                          return (
+                            <div
+                              key={idx}
+                              className="w-1.5 rounded-full bg-rose-500 transition-all duration-75"
+                              style={{ height: `${height}px` }}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <div className="text-[11px] text-slate-500">
+                        {audioLevel > 5 ? `Voice Input Signal: ${audioLevel}%` : 'Speak clearly near your device...'}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={stopVoiceRecording}
+                        className="mt-2 px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shadow-xs"
+                      >
+                        ✓ Done Speaking — Analyze Complaint
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-slate-800">
+                        Tap microphone to speak your issue in Hindi or English
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Browser will prompt for microphone permission. Audio is analyzed locally & translated by NagarSetu NLP.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Instant Vernacular Voice Presets */}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-left">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Quick Voice Test Presets (Instant NLP Verification):</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 italic">
-                    Example: "Mere ghar ke paas sadak par bahut bada gaddha hai aur andhera hai"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoicePreset('सड़क पर बहुत बड़ा गड्ढा है और पानी भर गया है, तुरंत मरम्मत चाहिए।', 'hi-IN')}
+                      className="p-2 text-left rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 transition-all flex items-start gap-1.5"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>🇮🇳 "सड़क पर बहुत बड़ा गड्ढा है और पानी भर गया है"</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoicePreset('खुला सीवर का मैनहोल है, पैदल चलने वालों के लिए गंभीर दुर्घटना का खतरा है।', 'hi-IN')}
+                      className="p-2 text-left rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 transition-all flex items-start gap-1.5"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>🇮🇳 "खुला सीवर का मैनहोल है, दुर्घटना का खतरा"</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoicePreset('स्ट्रीट लाइट बंद पड़ी है, रात में बहुत अंधेरा और असामाजिक तत्व रहते हैं।', 'hi-IN')}
+                      className="p-2 text-left rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 transition-all flex items-start gap-1.5"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>🇮🇳 "स्ट्रीट लाइट बंद है, रात में बहुत अंधेरा रहता है"</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoicePreset('Dangerous exposed high-voltage electrical wire sparking near children play area.', 'en-IN')}
+                      className="p-2 text-left rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 transition-all flex items-start gap-1.5"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>🇬🇧 "Dangerous sparking live wire near play area"</span>
+                    </button>
                   </div>
                 </div>
 
@@ -521,9 +735,28 @@ export const ReportIssuePage: React.FC = () => {
 
             {/* Description Textarea */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-2">
-              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Detailed Ground Description (Text or Spoken)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Detailed Ground Description (Text or Spoken)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeTab !== 'voice') setActiveTab('voice');
+                    if (!isRecording) startVoiceRecording();
+                    else stopVoiceRecording();
+                  }}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs ${
+                    isRecording
+                      ? 'bg-rose-100 text-rose-700 border border-rose-300 animate-pulse'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                  }`}
+                  title={isRecording ? 'Click to stop voice recording' : 'Dictate description with microphone'}
+                >
+                  {isRecording ? <MicOff className="w-3.5 h-3.5 text-rose-600" /> : <Mic className="w-3.5 h-3.5 text-blue-600" />}
+                  <span>{isRecording ? 'Listening (Click to Stop)' : 'Dictate with Mic'}</span>
+                </button>
+              </div>
               <textarea
                 rows={3}
                 value={description}
